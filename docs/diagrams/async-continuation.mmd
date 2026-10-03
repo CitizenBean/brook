@@ -1,0 +1,20 @@
+flowchart TB
+    accTitle: Brook asynchronous continuation
+    accDescr: An async tool declares whether a return is expected. Before dispatch, persist its context checkpoint, request, and output intent. A valid correlated return recovers or inserts context while preserving the tool call and result. Stale or duplicate replies do not resume the continuation.
+    call["Async tool call<br/>Declares reply mode"]
+    checkpoint["Persist before dispatch<br/>Checkpoint + request + output intent"]
+    send["Dispatch message<br/>Agent or external system"]
+    oneway["Fire-and-forget<br/>No result continuation"]
+    reply["Await-result<br/>Correlated return event"]
+    valid{"Valid continuation?<br/>ID · cancellation · status"}
+    ignore["Do not resume<br/>Duplicate · cancelled · expired"]
+    context["Recover or insert context<br/>Preserve tool call/result pair"]
+    run["Continue through harness<br/>Keep newer session activity"]
+    call --> checkpoint
+    checkpoint --> send
+    send -->|no return expected| oneway
+    send -->|return expected| reply
+    reply --> valid
+    valid -->|invalid or already handled| ignore
+    valid -->|valid| context
+    context --> run

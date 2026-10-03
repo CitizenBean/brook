@@ -1,12 +1,13 @@
 flowchart TB
-    accTitle: Brook operator graph
-    accDescr: Sources publish to topics. Any operator may route directly to a sink, to another processor, or to optional agents. Agent follow-ups return through timers and topics.
+    accTitle: Brook operator and agent graph
+    accDescr: Operators route directly to sinks, to processors, or to agents using swappable harnesses. Agents send messages to other agents and systems. Timed follow-ups return through topics.
     sources["Sources<br/>Users · Home Assistant · other systems"]
     topics["Topics"]
     operator["Operator<br/>Rule · classifier · UDF"]
     next["Another operator"]
-    agents["Optional agents<br/>One or many"]
-    sinks["Sinks<br/>Terminal · Discord · Kafka"]
+    agents["Agent A<br/>Swappable harness"]
+    agentb["Agent B<br/>Swappable harness"]
+    sinks["Sinks and systems<br/>Terminal · Discord · Kafka"]
     timer["Follow-up timer<br/>Durability proposed"]
     sources --> topics
     topics --> operator
@@ -15,6 +16,8 @@ flowchart TB
     operator -->|dispatch| agents
     next -->|direct output| sinks
     next -->|dispatch| agents
-    agents -->|output| sinks
+    agents -->|message| agentb
+    agents -->|message| sinks
+    agentb -->|message| sinks
     agents -->|schedule| timer
     timer -->|due event| topics
