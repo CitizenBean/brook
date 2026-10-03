@@ -1,0 +1,20 @@
+flowchart TB
+    accTitle: Brook history state and context
+    accDescr: Durable event history supports current state and session history. Selected evidence and a summary snapshot plus recent tail form bounded model context. The boxes are logical views rather than chosen physical stores.
+    input["Incoming events"]
+    history["Durable event history<br/>Independent retention"]
+    state["World and operator state<br/>Cheap updates"]
+    session["Session history<br/>Durable session activity"]
+    evidence["Selected evidence<br/>Facts + event references"]
+    summary["Summary snapshot + tail<br/>Recorded covered range"]
+    context["Model context<br/>Bounded for this run"]
+    run["Agent run"]
+    input --> history
+    history -->|apply changes| state
+    history -->|session activity| session
+    history -->|select events| evidence
+    state -->|relevant facts| evidence
+    session -->|project + compact| summary
+    evidence --> context
+    summary --> context
+    context --> run

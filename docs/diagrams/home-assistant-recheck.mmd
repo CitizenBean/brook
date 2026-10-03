@@ -1,0 +1,22 @@
+flowchart TB
+    accTitle: Home Assistant recheck example
+    accDescr: Update state before evaluating an event. Small temperature changes stop without an agent. A device outage schedules a durable recheck. The due event examines fresh state, then either stops after recovery or routes to an alert sink or agent.
+    event["Home Assistant event"]
+    state["Update current state"]
+    check{"Evaluate cheaply"}
+    quiet["No agent"]
+    pending["Recheck in 5 minutes<br/>Persisted timer proposed"]
+    due["Due event<br/>Returns through stream"]
+    fresh["Read fresh state<br/>Reconcile gaps first"]
+    status{"Recovered?"}
+    recovered["No further work"]
+    route["Selected evidence<br/>Alert sink or agent"]
+    event --> state
+    state --> check
+    check -->|21.0 to 21.1| quiet
+    check -->|unavailable| pending
+    pending -->|when due| due
+    due --> fresh
+    fresh --> status
+    status -->|yes| recovered
+    status -->|no; normally active| route
