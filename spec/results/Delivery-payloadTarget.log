@@ -1,0 +1,64 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Delivery
+Linting of module Delivery
+Starting... (2026-10-03 22:25:39)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:25:39.
+Error: Invariant ImmutableDestination is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ boundSerial = [m1 |-> 0, m2 |-> 0]
+/\ checked = {}
+/\ approvalOK = TRUE
+/\ target = [m1 |-> "A-chat", m2 |-> "A-chat"]
+/\ active = {"A-chat", "A-email", "B-chat", "B-email"}
+/\ attempts = [m1 |-> 0, m2 |-> 0]
+/\ boundVersion = [m1 |-> 0, m2 |-> 0]
+/\ status = [m1 |-> "new", m2 |-> "new"]
+/\ route = ( "A-chat" :> "A-chat" @@
+  "A-email" :> "A-email" @@
+  "B-chat" :> "B-chat" @@
+  "B-email" :> "B-email" )
+/\ version = ("A-chat" :> 0 @@ "A-email" :> 0 @@ "B-chat" :> 0 @@ "B-email" :> 0)
+/\ serial = ("A-chat" :> 0 @@ "A-email" :> 0 @@ "B-chat" :> 0 @@ "B-email" :> 0)
+/\ admitted = {}
+/\ admissionOK = TRUE
+/\ targetOK = TRUE
+
+State 2: <Authorize("m1","A-chat") line 27, col 5 to line 36, col 53 of module Delivery>
+/\ status = [m1 |-> "ready", m2 |-> "new"]
+
+State 3: <Check("m1") line 38, col 13 to line 42, col 40 of module Delivery>
+/\ checked = {"m1"}
+/\ status = [m1 |-> "ready", m2 |-> "new"]
+
+State 4: <Admit("m1","A-email") line 58, col 8 to line 66, col 56 of module Delivery>
+/\ boundSerial = [m1 |-> 0, m2 |-> 0]
+/\ checked = {"m1"}
+/\ approvalOK = TRUE
+/\ target = [m1 |-> "A-chat", m2 |-> "A-chat"]
+/\ active = {"A-chat", "A-email", "B-chat", "B-email"}
+/\ attempts = [m1 |-> 1, m2 |-> 0]
+/\ boundVersion = [m1 |-> 0, m2 |-> 0]
+/\ status = [m1 |-> "ready", m2 |-> "new"]
+/\ route = ( "A-chat" :> "A-chat" @@
+  "A-email" :> "A-email" @@
+  "B-chat" :> "B-chat" @@
+  "B-email" :> "B-email" )
+/\ version = ("A-chat" :> 0 @@ "A-email" :> 0 @@ "B-chat" :> 0 @@ "B-email" :> 0)
+/\ serial = ("A-chat" :> 0 @@ "A-email" :> 0 @@ "B-chat" :> 0 @@ "B-email" :> 0)
+/\ admitted = {<<"m1", "A-email">>}
+/\ admissionOK = TRUE
+/\ targetOK = FALSE
+
+400 states generated, 239 distinct states found, 214 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-10-03 22:25:39)

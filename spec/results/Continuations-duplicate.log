@@ -9,9 +9,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Continuations
 Linting of module Continuations
-Starting... (2026-10-03 21:41:33)
+Starting... (2026-10-03 22:28:20)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 21:41:33.
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:20.
 Error: Invariant AtMostOneClaim is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -84,4 +84,4 @@ State 5: <Accept(r1,r1,0,TRUE) line 69, col 5 to line 84, col 51 of module Conti
 
 286 states generated, 196 distinct states found, 136 states left on queue.
 The depth of the complete state graph search is 5.
-Finished in 00s at (2026-10-03 21:41:33)
+Finished in 00s at (2026-10-03 22:28:20)

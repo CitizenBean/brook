@@ -9,9 +9,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Continuations
 Linting of module Continuations
-Starting... (2026-10-03 21:41:34)
+Starting... (2026-10-03 22:28:21)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 21:41:34.
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:21.
 Error: Invariant PreserveNewerActivity is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -90,4 +90,4 @@ State 6: <Resume(r1) line 86, col 5 to line 98, col 65 of module Continuations>
 
 861 states generated, 514 distinct states found, 338 states left on queue.
 The depth of the complete state graph search is 6.
-Finished in 00s at (2026-10-03 21:41:34)
+Finished in 00s at (2026-10-03 22:28:21)

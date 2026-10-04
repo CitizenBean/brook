@@ -9,9 +9,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Continuations
 Linting of module Continuations
-Starting... (2026-10-03 21:41:32)
+Starting... (2026-10-03 22:28:19)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 21:41:32.
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:20.
 Error: Invariant StableEffectIdentity is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -80,4 +80,4 @@ State 4: <Retry(r1) line 41, col 5 to line 47, col 102 of module Continuations>
 
 68 states generated, 57 distinct states found, 41 states left on queue.
 The depth of the complete state graph search is 4.
-Finished in 00s at (2026-10-03 21:41:32)
+Finished in 00s at (2026-10-03 22:28:20)

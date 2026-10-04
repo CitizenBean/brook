@@ -9,9 +9,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Continuations
 Linting of module Continuations
-Starting... (2026-10-03 21:41:33)
+Starting... (2026-10-03 22:28:20)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 21:41:33.
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:20.
 Error: Invariant AtMostOneResume is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -95,4 +95,4 @@ State 7: <Resume(r1) line 86, col 5 to line 98, col 65 of module Continuations>
 
 2921 states generated, 1522 distinct states found, 944 states left on queue.
 The depth of the complete state graph search is 7.
-Finished in 00s at (2026-10-03 21:41:33)
+Finished in 00s at (2026-10-03 22:28:20)

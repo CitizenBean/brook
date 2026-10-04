@@ -14,6 +14,7 @@ This is a documentation-only proposal. **Agreed** describes foundations already 
 - Inexpensive deterministic or model-backed processing should reduce unnecessary agent activations and token use.
 - Kafka-like topics should support interchangeable in-memory, local on-disk, and Kafka backends.
 - Wasm is the preferred direction for portable user-defined functions.
+- Outgoing messages must reach the sink/account/recipient authorized for that specific message. An explicit user request may authorize another channel, such as email from a chat session; the originating reply route is not a universal destination restriction.
 - Durable event and session history are distinct from the limited context presented to a model. The same event may update state and be evaluated at several stages.
 - Context compaction produces a lossy summary snapshot plus a recent tail. The covered history range is recorded; original history follows a separate retention policy.
 - Client conversation identifiers are resolved and validated into internal, namespaced session identifiers. Device and world state enter conversation context only when relevant.
@@ -119,14 +120,18 @@ For Home Assistant, a flood of raw device events should update the relevant stat
 
 **Proposed identities:** an agent definition describes behavior and capabilities, a session groups durable activity, and a run is a bounded execution. Client conversation identifiers resolve within an authorized namespace. One active run per session with a mailbox is a proposed starting policy. An awaited continuation need not occupy an active run slot; newer events may advance the session meanwhile. Shared versus isolated multi-agent sessions, ownership, and batching remain open.
 
+### Session routing and context recovery
+
+The [session, context and authorized-delivery proposal](context-and-routing.md) defines the next concrete contracts for review. External `(authenticated namespace, trusted adapter client, conversation ID)` keys resolve to stable internal sessions. Replies return through the stored request’s source session and expected responder binding. Multiple pending requests can complete out of order while new session activity continues. Retained causal references support a fresh bounded context without rolling history back. Each outgoing message has its own authorized sink/account/recipient binding, so an explicit email request may leave a chat session through an email sink.
+
 ### Tool execution
 
-Synchronous tools return through the harness's ordinary tool-call flow. Async tools declare whether they are **fire-and-forget** or **await-result**. Fire-and-forget records the outgoing work without creating a result continuation. Await-result captures what the agent will need when a correlated reply arrives. Transport acknowledgement is not the tool's result.
+Synchronous tools return through the harness's ordinary tool-call flow. Async tools declare whether they are **fire-and-forget** or **await-result**. Fire-and-forget records the outgoing work without creating a result continuation. Await-result captures what the agent will need when a correlated reply arrives. **Proposed portable default:** the dispatch tool completes with a pending receipt; a later correlated outcome becomes a new continuation event, and a fresh run receives current context plus retained causal material. The receipt and transport acknowledgement are not the eventual work outcome. Exact suspended-tool resumption is an optional advertised harness capability.
 
 ```mermaid
 flowchart TB
     accTitle: Brook asynchronous continuation
-    accDescr: An async tool declares whether a return is expected. Before dispatch, persist its context checkpoint, request, and output intent. A valid correlated return recovers or inserts context while preserving the tool call and result. Stale or duplicate replies do not resume the continuation.
+    accDescr: An async tool declares whether a return is expected. Before dispatch, persist its context checkpoint, request, and output intent. A valid correlated return builds current context with retained logical call and outcome references. Stale or duplicate replies do not resume the continuation.
     call["Async tool call<br/>Declares reply mode"]
     checkpoint["Persist before dispatch<br/>Checkpoint + request + output intent"]
     send["Dispatch message<br/>Agent or external system"]
@@ -134,7 +139,7 @@ flowchart TB
     reply["Await-result<br/>Correlated return event"]
     valid{"Valid continuation?<br/>ID · cancellation · status"}
     ignore["Do not resume<br/>Duplicate · cancelled · expired"]
-    context["Recover or insert context<br/>Preserve tool call/result pair"]
+    context["Current context + causal refs<br/>Keep logical call/outcome"]
     run["Continue through harness<br/>Keep newer session activity"]
     call --> checkpoint
     checkpoint --> send
@@ -152,9 +157,9 @@ flowchart TB
 
 1. Before accepting awaited work, perform the dependency admission described below. Before dispatch, durably coordinate a context checkpoint, request record, and output intent. Capture the originating tool call and causal context, directly or by durable references. Record request/continuation correlation, tool-call identity, expected reply shape, harness/configuration version, cancellation generation, and context revision. The storage protocol is open; a crash must not leave delivered work without its recovery record.
 2. Dispatch through the graph. Validate returning correlation, reply shape, cancellation generation, and pending status. A newer context revision alone does not invalidate a reply. Atomically claim the pending continuation, record the reply, and enqueue its resume, or use an equivalent crash-safe protocol. Duplicate replies cannot claim it twice; cancellation or timeout closes it. Late results cannot revive it. Retry and failure policies preserve request and effect identities.
-3. Recover the captured context or insert the missing originating material with its result. Preserve valid tool-call/result pairing and any newer session activity. Use version checks and a deliberate append, merge, or branch policy; never replace newer context with an old snapshot. The exact conflict policy remains open.
+3. Resolve retained causal references and build a fresh bounded context using current session activity plus the originating material and correlated outcome. In the portable mode, the original provider tool call already has its pending-receipt result; the later outcome is fresh continuation input, not a stale provider result spliced into an advanced transcript. Use version checks and a deliberate append, merge, or branch policy; never replace newer context with an old snapshot. Missing required material produces an explicit recovery failure. Exact conflict and retention mechanisms remain open.
 
-A checkpoint is a portable context/reconstruction record, optionally supplemented by a harness-specific resume handle. It does not promise serialization of arbitrary third-party runtime internals. **Open:** adapters need capability negotiation for context export/import, result insertion, resumable execution, and cancellation. Rebuilding a transcript and starting a new run is a possible degraded mode, not guaranteed same-execution recovery. Unsupported modes must be explicit; fallback policy is still to decide.
+A checkpoint is a portable context/reconstruction record, optionally supplemented by a harness-specific resume handle. It does not promise serialization of arbitrary third-party runtime internals. **Open:** adapters need capability negotiation for context export/import, result insertion, resumable execution, and cancellation. Constructing fresh context and starting a new run is the proposed portable default. Exact same-execution resumption is an optional adapter capability with its own compatibility requirements. Unsupported modes must be explicit; fallback policy is still to decide.
 
 ### Dynamic dependency evaluation
 
@@ -251,7 +256,7 @@ Prometheus integration is a candidate extension. Two proposed adapter roles are:
 
 ## Bounded formal checks
 
-The [TLA+ models](../spec/README.md) explore proposed wait admission and continuation safety contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
+The [TLA+ models](../spec/README.md) explore proposed wait admission, continuation safety, trusted session routing, retained context and per-intent authorized delivery contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
 
 ## Questions for review
 

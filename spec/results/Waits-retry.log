@@ -9,9 +9,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Waits
 Linting of module Waits
-Starting... (2026-10-03 21:41:32)
+Starting... (2026-10-03 22:28:19)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 21:41:32.
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:19.
 Error: Invariant RetryIdentity is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -75,4 +75,4 @@ State 4: <Retry(<<a, b>>) line 27, col 13 to line 31, col 43 of module Waits>
 
 44 states generated, 29 distinct states found, 20 states left on queue.
 The depth of the complete state graph search is 4.
-Finished in 00s at (2026-10-03 21:41:32)
+Finished in 00s at (2026-10-03 22:28:19)
