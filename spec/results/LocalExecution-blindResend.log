@@ -1,0 +1,70 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module LocalExecution
+Linting of module LocalExecution
+Starting... (2026-10-04 01:23:04)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-04 01:23:04.
+Error: Invariant NoBlindResend is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ result = FALSE
+/\ invoked = FALSE
+/\ epoch = 1
+/\ commitOK = TRUE
+/\ sends = 0
+/\ crashes = 0
+/\ completions = 0
+/\ attempts = 0
+/\ send = "ready"
+/\ up = TRUE
+/\ accepted = FALSE
+/\ materialized = FALSE
+/\ externalCount = 0
+/\ pins = TRUE
+/\ job = "none"
+/\ issued = {}
+/\ intent = FALSE
+
+State 2: <AdmitSend line 19, col 5 to line 22, col 83 of module LocalExecution>
+/\ sends = 1
+/\ send = "inFlight"
+
+State 3: <Crash line 62, col 5 to line 66, col 86 of module LocalExecution>
+/\ crashes = 1
+/\ up = FALSE
+
+State 4: <Restart line 68, col 5 to line 74, col 78 of module LocalExecution>
+/\ epoch = 2
+/\ crashes = 1
+/\ send = "ready"
+
+State 5: <AdmitSend line 19, col 5 to line 22, col 83 of module LocalExecution>
+/\ result = FALSE
+/\ invoked = FALSE
+/\ epoch = 2
+/\ commitOK = TRUE
+/\ sends = 2
+/\ crashes = 1
+/\ completions = 0
+/\ attempts = 0
+/\ send = "inFlight"
+/\ up = TRUE
+/\ accepted = FALSE
+/\ materialized = FALSE
+/\ externalCount = 0
+/\ pins = TRUE
+/\ job = "none"
+/\ issued = {}
+/\ intent = FALSE
+
+19 states generated, 18 distinct states found, 7 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-04 01:23:04)

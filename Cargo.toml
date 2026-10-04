@@ -1,0 +1,17 @@
+[package]
+name = "brook"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "MIT"
+description = "Experimental local durable event and continuation core"
+
+[dependencies]
+fs2 = "0.4.3"
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"

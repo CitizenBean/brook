@@ -8,7 +8,9 @@ The priorities are extensibility, clean interfaces, easy setup, and useful defau
 
 ## Current status
 
-This repository contains an architecture draft for discussion. There is no implementation or stable API yet. The draft distinguishes agreed foundations, proposed contracts, and open decisions. It makes no performance or delivery guarantees for Brook.
+This repository contains an architecture draft and an experimental local Rust core. There is no stable API or production delivery guarantee. The draft distinguishes agreed foundations, proposed contracts, and open decisions.
+
+Run the fake-only two-session demo with `cargo run --locked -- demo /tmp/brook-demo-new` using a new directory. See [local core contracts, tests and limitations](docs/local-core.md). Seven-day garbage collection, real providers and arbitrary graph execution remain unimplemented.
 
 Start with the [architecture draft](docs/architecture.md), including five diagrams and the [questions for review](docs/architecture.md#questions-for-review).
 
