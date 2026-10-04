@@ -14,6 +14,8 @@ Run the fake-only two-session demo with `cargo run --locked -- demo /tmp/brook-d
 
 Try the zero-config terminal recipe with `cargo run --locked -- processor-demo /tmp/brook-processors-new`. The [processor runtime](docs/processors.md) adds durable native processor DAGs, typed Rust adapters, routing operators and an uncertainty-aware terminal sink. [Easy setup, connector management and a live web DAG](docs/control-plane.md) describe the accepted product direction and distinguish implemented foundations from planned work.
 
+The [deterministic host simulations](docs/simulation-testing.md) compose these real APIs with scripted harnesses, seeded schedules, independent oracles and process-kill recovery. They expose the missing production graph/agent bridge rather than claiming an agent loop exists.
+
 Start with the [architecture draft](docs/architecture.md), including five diagrams and the [questions for review](docs/architecture.md#questions-for-review).
 
 The [session, context and authorized-delivery proposal](docs/context-and-routing.md) develops multi-session routing, portable asynchronous resumptions and per-message sink authorization, with [bounded TLA+ checks](spec/README.md).
