@@ -1,0 +1,70 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Retention
+Linting of module Retention
+Starting... (2026-10-04 00:05:15)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-04 00:05:16.
+Error: Invariant NoControlProgress is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ blocked = {}
+/\ terminal = {}
+/\ terminalAt = [a |-> 0, b |-> 0, c |-> 0]
+/\ now = 0
+/\ bodies = {}
+/\ terminalHistory = {}
+/\ pending = {}
+/\ windowOK = TRUE
+/\ staleRejected = {}
+/\ queue = {}
+/\ controlProgress = FALSE
+/\ admissionCount = [a |-> 0, b |-> 0, c |-> 0]
+/\ created = [a |-> 0, b |-> 0, c |-> 0]
+/\ snapshot = TRUE
+/\ control = {}
+
+State 2: <Admit("a") line 28, col 5 to line 38, col 50 of module Retention>
+/\ bodies = {"a"}
+/\ pending = {"a"}
+/\ queue = {"a"}
+/\ admissionCount = [a |-> 1, b |-> 0, c |-> 0]
+/\ control = {"a"}
+
+State 3: <Dequeue("a") line 40, col 5 to line 43, col 41 of module Retention>
+/\ queue = {}
+
+State 4: <Admit("b") line 28, col 5 to line 38, col 50 of module Retention>
+/\ bodies = {"a", "b"}
+/\ pending = {"a", "b"}
+/\ queue = {"b"}
+/\ admissionCount = [a |-> 1, b |-> 1, c |-> 0]
+/\ control = {"a", "b"}
+
+State 5: <Finish("a") line 45, col 5 to line 53, col 43 of module Retention>
+/\ blocked = {}
+/\ terminal = {"a"}
+/\ terminalAt = [a |-> 0, b |-> 0, c |-> 0]
+/\ now = 0
+/\ bodies = {"a", "b"}
+/\ terminalHistory = {"a"}
+/\ pending = {"b"}
+/\ windowOK = TRUE
+/\ staleRejected = {}
+/\ queue = {"b"}
+/\ controlProgress = TRUE
+/\ admissionCount = [a |-> 1, b |-> 1, c |-> 0]
+/\ created = [a |-> 0, b |-> 0, c |-> 0]
+/\ snapshot = TRUE
+/\ control = {"a", "b"}
+
+105 states generated, 85 distinct states found, 53 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-04 00:05:16)

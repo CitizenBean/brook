@@ -7,16 +7,17 @@ Parsing standard or local module
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
-Semantic processing of module Continuations
-Linting of module Continuations
-Starting... (2026-10-04 00:01:38)
+Semantic processing of module Ownership
+Linting of module Ownership
+Starting... (2026-10-04 00:07:51)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-04 00:01:38.
+Finished computing initial states: 1 distinct state generated at 2026-10-04 00:07:51.
 Model checking completed. No error has been found.
   Estimates of the probability that TLC did not check all reachable states
   because two distinct states had the same fingerprint:
-  calculated (optimistic):  val = 6.1E-11
-73387 states generated, 22116 distinct states found, 0 states left on queue.
-The depth of the complete state graph search is 15.
+  calculated (optimistic):  val = 1.6E-9
+  based on the actual fingerprints:  val = 5.0E-9
+390173 states generated, 99733 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 16.
 The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 6 and the 95th percentile is 3).
-Finished in 00s at (2026-10-04 00:01:39)
+Finished in 02s at (2026-10-04 00:07:54)

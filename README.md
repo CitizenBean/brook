@@ -14,6 +14,8 @@ Start with the [architecture draft](docs/architecture.md), including five diagra
 
 The [session, context and authorized-delivery proposal](docs/context-and-routing.md) develops multi-session routing, portable asynchronous resumptions and per-message sink authorization, with [bounded TLA+ checks](spec/README.md).
 
+The [local reliability decisions](docs/local-reliability.md) cover durable admission, leased ownership, dead-letter recovery and bounded storage with configurable seven-day unused-record retention.
+
 Editable Mermaid sources and SVG views are in [docs/diagrams](docs/diagrams). The diagrams show logical responsibilities, not a finalized crate layout or deployment topology.
 
 Mermaid is the editable diagram source; the SVG files are matching previews rendered with Graphviz. Keep their nodes, edges, and labels synchronized when editing.

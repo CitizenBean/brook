@@ -19,6 +19,8 @@ This is a documentation-only proposal. **Agreed** describes foundations already 
 - Context compaction produces a lossy summary snapshot plus a recent tail. The covered history range is recorded; original history follows a separate retention policy.
 - Client conversation identifiers are resolved and validated into internal, namespaced session identifiers. Device and world state enter conversation context only when relevant.
 
+- Durable admission before acknowledgement, local transactional ownership/leases, dead-letter recovery, bounded resources and configurable seven-day retention of unused records are now agreed directions; see the [local reliability design](local-reliability.md) for scope and proposed mechanics.
+
 ## The operator graph
 
 ```mermaid
@@ -204,6 +206,12 @@ A normally active device becoming unavailable can instead schedule a recheck fiv
 
 Five minutes is illustrative. **Proposed:** persist the reason, event references, due time, and cancellation identity. Recovery can cancel the recheck or make it a no-op; duplicate delivery must not duplicate notifications. Agent follow-ups use the same bounded scheduling model.
 
+## Local admission and ownership
+
+**Agreed:** focus on a local transactional store. A recoverable request/session causal record, pending continuation and outgoing intent must commit before an accepted receipt is returned. A crash before commit admits no work; a retry after commit or receipt loss recovers the same scoped logical operation within its declared retry window. These are per-step transactions, with no LLM or remote effect inside them.
+
+Workers renew authoritative leases. Claims after expiry or explicit release increment a persistent per-session ownership generation, separate from cancellation and context revision; protected commits fence old tokens. Takeover preserves durable pending work for the new owner. The [local reliability design](local-reliability.md) also specifies the accepted dead-letter recovery direction, bounded resource policy and configurable seven-day unused-record retention, while keeping clock/storage details and distributed consensus implementation open.
+
 ## Transport and recovery
 
 ```mermaid
@@ -233,7 +241,7 @@ In-memory transport is useful for tests and explicitly ephemeral use. A local on
 
 Kafka moves and retains events; adopting it does not settle ownership of state, sessions, or timers. Distributed operation still needs recovery checkpoints, ownership transfer, and fencing against stale workers.
 
-**Proposed reliability requirement:** processing must coordinate the consumed position, state updates, timer changes, continuation checkpoints, and output intents so a crash cannot silently lose acknowledged work. A local transactional boundary may cover these together. Kafka plus a separate state store requires an explicit outbox, checkpoint, or recovery protocol. The mechanism is open.
+**Proposed recovery coordination:** processing must coordinate the consumed position, state updates, timer changes, continuation checkpoints, and output intents so a crash cannot silently lose acknowledged work. The local design targets transactional boundaries for these durable steps; the exact storage engine and record protocol remain open. Kafka plus a separate state store requires an explicit outbox, checkpoint, or recovery protocol. The mechanism is open.
 
 External effects need special treatment. Replaying an event must not casually resend a Discord message or repeat an agent tool action. Persisted output intents, stable effect identities, sink-supported idempotency, and an explicit replay mode are candidates. An outbox alone cannot guarantee exactly-once effects at a destination that cannot deduplicate. Brook makes no end-to-end exactly-once promise; [Kafka's delivery documentation](https://kafka.apache.org/41/design/design/) likewise distinguishes Kafka transactions from cooperating external destinations.
 
@@ -256,15 +264,15 @@ Prometheus integration is a candidate extension. Two proposed adapter roles are:
 
 ## Bounded formal checks
 
-The [TLA+ models](../spec/README.md) explore proposed wait admission, continuation safety, trusted session routing, retained context and per-intent authorized delivery contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
+The [TLA+ models](../spec/README.md) explore wait admission, continuation safety, trusted session routing, retained context, authorized delivery, durable admission, local ownership, dead-letter recovery and bounded retention contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
 
 ## Questions for review
 
-1. What portable harness capabilities are required? When may an adapter reconstruct context and start a new run instead of resuming the original execution?
+1. What capabilities support the portable pending-receipt/continuation flow, and which harnesses can safely advertise exact suspended-execution resumption?
 2. Should messaging use named output ports or direct destinations? What happens on routing failure, low confidence, or queue saturation?
 3. Can agents share a session? How should replies merge or branch when its context has advanced, and who owns concurrent updates?
 4. What state does Brook own versus fetch from connectors, and how are gaps and stale observations reconciled?
-5. What is the minimum recovery contract across backends for state, timers, continuation checkpoints, output intents, and consumed positions?
+5. Which local storage engine, transaction boundaries, restart-safe lease clock and resource accounting implement the agreed admission/recovery contract? How should future backends expose weaker or stronger guarantees?
 6. Does circular-dependency rejection cover outstanding waits only, or message-only cycles too? How are concurrent admission, terminal cleanup, and retry identity coordinated?
 
 Resolve these boundaries before choosing crates or promising runtime behavior.

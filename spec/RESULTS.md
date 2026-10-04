@@ -1,5 +1,94 @@
 # Verified TLC results
 
+The suite now contains **91 configurations**: nine safe models, 60 mutation checks, 21 positive reachability witnesses and one explicitly ephemeral-profile boundary witness. All have their expected results. This revision executed all 47 new admission/ownership/recovery/retention configurations and reran the existing safe `Continuations` and `Delivery` regressions. The other 42 published results are preserved byte-for-byte; the five earlier models and all 44 earlier configurations are unchanged from the published baseline.
+
+## Local reliability revision
+
+- Source baseline: `d384568b6de14fc115ee7c293d3fedf058f23ff8`.
+- Tool: `TLC2 Version 2026.10.03.231403 (rev: 1813307)`, official `v1.8.0/tla2tools.jar` release URL.
+- Tool SHA-256: `b3e56ba18c65abd22e35755739963000f22e770279841d364699c31951ede70a`.
+- Runtime/options are unchanged: OpenJDK 25.0.2, `-XX:+UseParallelGC -Xmx1g`, one worker, seed 1, fingerprint polynomial 0, breadth-first exploration.
+- Reproduce all cases with `python3 spec/check.py /tmp/tla2tools.jar`, or select one with `--case Admission` (likewise `Ownership`, `Recovery`, `Retention` or a configuration name).
+- The new modules/configurations/runner and retained sources are identified by [SOURCES.sha256](results/SOURCES.sha256). No symmetry, state constraints or depth truncation are used; no fairness or liveness is asserted. Negative checks stop at their expected first counterexample.
+
+| New safe model | Bounds | Generated | Distinct | Queue at completion |
+| --- | --- | ---: | ---: | ---: |
+| Admission | 2 scoped operation keys, 2 payloads, 2 token incarnations; durable profile | 260767 | 63574 | 0 |
+| Ownership | 2 sessions, 2 workers; time 0–4, duration 2, at most 2 grants/session | 390173 | 99733 | 0 |
+| Recovery | 2 effects/sessions, 2 attempts/effect, shared notification budget 4 | 12022 | 4185 | 0 |
+| Retention | 3 operations, disk 7/RAM 1 abstract units, unused TTL 2, retry/work intervals 3, time 0–6 | 6642347 | 1394936 | 0 |
+
+The retention ticks are independent bounded test intervals, not literal production days. The agreed configurable unused-record default is seven days; the model does not select a production pending-work deadline. It checks capacity and collection safety, not eventual cleanup.
+
+## New checks
+
+| Configuration / trace | Generated | Distinct | Queue at stop | Result |
+| --- | ---: | ---: | ---: | --- |
+| [Retention](results/Retention.log) | 6642347 | 1394936 | 0 | Completed; all configured invariants pass |
+| [Retention-overDisk](results/Retention-overDisk.log) | 3755 | 2123 | 1281 | Expected mutation failure: `BoundedDisk` |
+| [Retention-overRam](results/Retention-overRam.log) | 15 | 11 | 7 | Expected mutation failure: `BoundedRam` |
+| [Retention-collectPinned](results/Retention-collectPinned.log) | 94 | 78 | 50 | Expected mutation failure: `LivePinsRecoverable` |
+| [Retention-collectSnapshot](results/Retention-collectSnapshot.log) | 17 | 17 | 11 | Expected mutation failure: `CurrentSnapshotRetained` |
+| [Retention-dropExpired](results/Retention-dropExpired.log) | 253 | 198 | 122 | Expected mutation failure: `TerminalBeforeReclaim` |
+| [Retention-forgetWindow](results/Retention-forgetWindow.log) | 64 | 46 | 29 | Expected mutation failure: `RetryWindowEnforced` |
+| [Retention-duplicateAfterGC](results/Retention-duplicateAfterGC.log) | 8023 | 4329 | 2828 | Expected mutation failure: `NoReadmission` |
+| [Retention-controlWitness](results/Retention-controlWitness.log) | 105 | 85 | 53 | Reachability witness: `NoControlProgress` |
+| [Retention-backpressureWitness](results/Retention-backpressureWitness.log) | 11 | 11 | 7 | Reachability witness: `NoBackpressure` |
+| [Retention-unpinWitness](results/Retention-unpinWitness.log) | 261 | 203 | 125 | Reachability witness: `NoCleanupAfterUnpin` |
+| [Retention-staleWitness](results/Retention-staleWitness.log) | 4972 | 2866 | 1743 | Reachability witness: `NoStaleRetryRejection` |
+| [Recovery](results/Recovery.log) | 12022 | 4185 | 0 | Completed; all configured invariants pass |
+| [Recovery-wrongSession](results/Recovery-wrongSession.log) | 35 | 27 | 14 | Expected mutation failure: `RecoveryEvidence` |
+| [Recovery-unknownAsFailed](results/Recovery-unknownAsFailed.log) | 42 | 32 | 17 | Expected mutation failure: `RecoveryEvidence` |
+| [Recovery-duplicateNotice](results/Recovery-duplicateNotice.log) | 111 | 52 | 25 | Expected mutation failure: `AtMostOneRecoveryEvent` |
+| [Recovery-renewBudget](results/Recovery-renewBudget.log) | 624 | 278 | 114 | Expected mutation failure: `BoundedRecoveryNotifications` |
+| [Recovery-blindRedrive](results/Recovery-blindRedrive.log) | 31 | 24 | 11 | Expected mutation failure: `AuthorizedSafeRedrive` |
+| [Recovery-freshIdentity](results/Recovery-freshIdentity.log) | 180 | 94 | 42 | Expected mutation failure: `StableEffectIdentity` |
+| [Recovery-unknownWitness](results/Recovery-unknownWitness.log) | 42 | 32 | 17 | Reachability witness: `NoUnknownNotification` |
+| [Recovery-investigationWitness](results/Recovery-investigationWitness.log) | 443 | 203 | 87 | Reachability witness: `NoInvestigatedEmailRedrive` |
+| [Ownership](results/Ownership.log) | 390173 | 99733 | 0 | Completed; all configured invariants pass |
+| [Ownership-stealLive](results/Ownership-stealLive.log) | 29 | 13 | 9 | Expected mutation failure: `ClaimOnlyEligible` |
+| [Ownership-racyClaim](results/Ownership-racyClaim.log) | 658 | 126 | 83 | Expected mutation failure: `ClaimOnlyEligible` |
+| [Ownership-staleCommit](results/Ownership-staleCommit.log) | 753 | 241 | 175 | Expected mutation failure: `FencedWrites` |
+| [Ownership-staleHeartbeat](results/Ownership-staleHeartbeat.log) | 634 | 241 | 175 | Expected mutation failure: `HeartbeatOnlyLive` |
+| [Ownership-expiredRenew](results/Ownership-expiredRenew.log) | 477 | 187 | 137 | Expected mutation failure: `HeartbeatOnlyLive` |
+| [Ownership-reuseGeneration](results/Ownership-reuseGeneration.log) | 569 | 242 | 176 | Expected mutation failure: `FencedWrites` |
+| [Ownership-globalClaim](results/Ownership-globalClaim.log) | 3 | 3 | 1 | Expected mutation failure: `SessionLocalOwnership` |
+| [Ownership-takeoverCancels](results/Ownership-takeoverCancels.log) | 3 | 3 | 1 | Expected mutation failure: `OwnershipPreservesWork` |
+| [Ownership-transferWitness](results/Ownership-transferWitness.log) | 1609 | 633 | 447 | Reachability witness: `NoTransferredResume` |
+| [Ownership-reacquireWitness](results/Ownership-reacquireWitness.log) | 129 | 65 | 49 | Reachability witness: `NoReacquisition` |
+| [Ownership-heartbeatWitness](results/Ownership-heartbeatWitness.log) | 106 | 52 | 39 | Reachability witness: `NoHeartbeatExtension` |
+| [Admission](results/Admission.log) | 260767 | 63574 | 0 | Completed; all configured invariants pass |
+| [Admission-earlyReceipt](results/Admission-earlyReceipt.log) | 8 | 8 | 5 | Expected mutation failure: `ReceiptRecoverable` |
+| [Admission-splitCommit](results/Admission-splitCommit.log) | 7 | 7 | 4 | Expected mutation failure: `CompleteAdmission` |
+| [Admission-retryDuplicate](results/Admission-retryDuplicate.log) | 96 | 79 | 51 | Expected mutation failure: `OneLogicalAdmission` |
+| [Admission-replaceMismatch](results/Admission-replaceMismatch.log) | 102 | 83 | 53 | Expected mutation failure: `OneLogicalAdmission` |
+| [Admission-ignorePayload](results/Admission-ignorePayload.log) | 285 | 182 | 98 | Expected mutation failure: `ReceiptMatchesCaller` |
+| [Admission-omitScope](results/Admission-omitScope.log) | 20 | 15 | 6 | Expected mutation failure: `ReceiptMatchesCaller` |
+| [Admission-volatileCausal](results/Admission-volatileCausal.log) | 18 | 13 | 5 | Expected mutation failure: `CompleteAdmission` |
+| [Admission-dropRecovery](results/Admission-dropRecovery.log) | 44 | 39 | 25 | Expected mutation failure: `RecoveryScansCommitted` |
+| [Admission-receiptWitness](results/Admission-receiptWitness.log) | 754 | 478 | 266 | Reachability witness: `NoRecoveredReceipt` |
+| [Admission-dispatchWitness](results/Admission-dispatchWitness.log) | 137 | 100 | 60 | Reachability witness: `NoRecoveredDispatch` |
+| [Admission-mismatchWitness](results/Admission-mismatchWitness.log) | 102 | 83 | 53 | Reachability witness: `NoMismatchRejection` |
+| [Admission-scopeWitness](results/Admission-scopeWitness.log) | 270 | 169 | 87 | Reachability witness: `NoScopedAdmissions` |
+| [Admission-ephemeralWitness](results/Admission-ephemeralWitness.log) | 36 | 31 | 19 | Weaker-profile boundary witness: `ReceiptRecoverable` |
+
+## New trace readings and limits
+
+- **Admission:** commit, crash before the pending receipt is delivered, restart, resubmit the same scoped ID/payload, reuse and acknowledge the original receipt token. Recovery scanning also makes its original intent dispatchable. Counters and externally observed receipts survive crashes in the model; unsafe early receipts, partial commits, duplicate/replaced work and lost records cannot erase their evidence.
+- **Ephemeral profile:** `Submit → Commit → Acknowledge → Crash` loses the in-memory records while the external receipt observation remains. This deliberately violates the durable assertion under `Durable = FALSE`; it is not a defect reported in the durable configuration.
+- **Ownership:** worker 1 claims, authority time reaches expiry, worker 2 claims a fresh generation and resumes the existing pending continuation. Cancellation generation stays unchanged. Other witnesses show heartbeat extension and release/reacquisition by the same worker with a new generation. The racy-claim trace records competing preflights before both are incorrectly granted.
+- **Recovery:** an uncertain email outcome is quarantined and notified to the originating session; a trusted authorization decision plus authoritative evidence of non-application permits redrive under the same effect identity. Notification failures spend the shared budget rather than creating fresh recursive budgets. No successful provider retry or resolution of ambiguity is claimed by moving to the DLQ.
+- **Retention:** two body/control reservations and the current snapshot fill the seven-unit budget; a terminal transition still succeeds from its reserved control space. A record pinned past its unused TTL is completed/unpinned and then collected. Old IDs remain rejected after marker collection; forgetting the retry floor exposes an actual second admission in the dedicated negative control. Live snapshots and pending bodies remain protected.
+
+The two repeated legacy safe checks retained their previous counts: `Continuations` 73,387 generated / 22,116 distinct; `Delivery` 1,843,201 generated / 331,776 distinct, both with empty queues. Their current logs are linked in the retained table below.
+
+The new slices assume atomic local storage, trusted identifiers/evidence/policy, comparable authority time, persistent generations and accurate abstract accounting. They do not prove a storage engine, crash-safe clock policy, consensus, physical worker exclusivity, provider fencing, exact byte usage, semantic evidence quality or composition between models. The [local reliability document](../docs/local-reliability.md) separates accepted requirements from proposed mechanisms. The [model guide](README.md) describes durable/volatile/ghost state and each abstraction. Fingerprint collision estimates remain in the safe logs.
+
+## Retained session/routing results
+
+The following 44-configuration report describes the earlier published slice. Its numerical results and counterexamples remain applicable to the unchanged models; it is not a claim that all 44 were newly rerun for this local-reliability edit.
+
+
 All **44 configurations** produced their expected results: five safe models completed exhaustive breadth-first exploration with empty queues, 31 mutations produced the specified counterexamples, and eight deliberately false assertions produced positive reachability witnesses. The original checks were rerun alongside the new models. After strengthening the multi-session ordering witness, the final `SessionContext` safe configuration and all of its mutation/witness configurations were rerun.
 
 ## Reproduction and tested tool

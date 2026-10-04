@@ -1,0 +1,103 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Recovery
+Linting of module Recovery
+Starting... (2026-10-03 23:56:38)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 23:56:38.
+Error: Invariant NoInvestigatedEmailRedrive is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ effectIdentity = [emailA |-> "emailA", chatB |-> "chatB"]
+/\ recoveredEmail = FALSE
+/\ noticeCount = ( <<"emailA", 1>> :> 0 @@
+  <<"emailA", 2>> :> 0 @@
+  <<"chatB", 1>> :> 0 @@
+  <<"chatB", 2>> :> 0 )
+/\ dlq = {}
+/\ noEffectEvidence = {}
+/\ remaining = 4
+/\ spent = 0
+/\ notices = {}
+/\ authorized = {}
+/\ retryOK = TRUE
+/\ attempts = [emailA |-> 0, chatB |-> 0]
+/\ outcome = [emailA |-> "none", chatB |-> "none"]
+/\ phase = [emailA |-> "ready", chatB |-> "ready"]
+
+State 2: <Attempt("emailA") line 30, col 5 to line 36, col 50 of module Recovery>
+/\ attempts = [emailA |-> 1, chatB |-> 0]
+/\ phase = [emailA |-> "inFlight", chatB |-> "ready"]
+
+State 3: <Observe("emailA","unknown") line 38, col 5 to line 42, col 80 of module Recovery>
+/\ outcome = [emailA |-> "unknown", chatB |-> "none"]
+/\ phase = [emailA |-> "unresolved", chatB |-> "ready"]
+
+State 4: <Quarantine("emailA") line 44, col 5 to line 48, col 80 of module Recovery>
+/\ dlq = { [ effect |-> "emailA",
+    request |-> "requestA",
+    attempt |-> 1,
+    outcome |-> "unknown",
+    source |-> "sA",
+    destination |-> "accountA/email/recipient" ] }
+/\ phase = [emailA |-> "quarantined", chatB |-> "ready"]
+
+State 5: <Next line 95, col 10 to line 95, col 92 of module Recovery>
+/\ noticeCount = ( <<"emailA", 1>> :> 1 @@
+  <<"emailA", 2>> :> 0 @@
+  <<"chatB", 1>> :> 0 @@
+  <<"chatB", 2>> :> 0 )
+/\ remaining = 3
+/\ spent = 1
+/\ notices = { [ effect |-> "emailA",
+    request |-> "requestA",
+    attempt |-> 1,
+    outcome |-> "unknown",
+    source |-> "sA",
+    destination |-> "accountA/email/recipient" ] }
+
+State 6: <AuthorizeRecovery("emailA") line 67, col 5 to line 70, col 75 of module Recovery>
+/\ authorized = {"emailA"}
+
+State 7: <ReconcileNoEffect("emailA") line 73, col 5 to line 77, col 69 of module Recovery>
+/\ noEffectEvidence = {"emailA"}
+/\ authorized = {"emailA"}
+
+State 8: <Redrive("emailA") line 81, col 5 to line 91, col 34 of module Recovery>
+/\ effectIdentity = [emailA |-> "emailA", chatB |-> "chatB"]
+/\ recoveredEmail = TRUE
+/\ noticeCount = ( <<"emailA", 1>> :> 1 @@
+  <<"emailA", 2>> :> 0 @@
+  <<"chatB", 1>> :> 0 @@
+  <<"chatB", 2>> :> 0 )
+/\ dlq = { [ effect |-> "emailA",
+    request |-> "requestA",
+    attempt |-> 1,
+    outcome |-> "unknown",
+    source |-> "sA",
+    destination |-> "accountA/email/recipient" ] }
+/\ noEffectEvidence = {"emailA"}
+/\ remaining = 3
+/\ spent = 1
+/\ notices = { [ effect |-> "emailA",
+    request |-> "requestA",
+    attempt |-> 1,
+    outcome |-> "unknown",
+    source |-> "sA",
+    destination |-> "accountA/email/recipient" ] }
+/\ authorized = {}
+/\ retryOK = TRUE
+/\ attempts = [emailA |-> 1, chatB |-> 0]
+/\ outcome = [emailA |-> "unknown", chatB |-> "none"]
+/\ phase = [emailA |-> "ready", chatB |-> "ready"]
+
+443 states generated, 203 distinct states found, 87 states left on queue.
+The depth of the complete state graph search is 8.
+Finished in 00s at (2026-10-03 23:56:38)

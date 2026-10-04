@@ -1,0 +1,82 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Admission
+Linting of module Admission
+Starting... (2026-10-03 23:48:22)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 23:48:22.
+Error: Invariant CompleteAdmission is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ pending = {}
+/\ lostAtCrash = {}
+/\ admissionCount = ("scopeA/op1" :> 0 @@ "scopeB/op1" :> 0)
+/\ commitHistory = {}
+/\ inputPayload = "p"
+/\ committedAtCrash = {}
+/\ rejected = {}
+/\ recoveredDispatch = FALSE
+/\ observedReceipts = {}
+/\ outbox = {}
+/\ recoveredReceipt = FALSE
+/\ committed = {}
+/\ inputKey = "scopeA/op1"
+/\ requests = {}
+/\ phase = "idle"
+/\ recoveryOK = TRUE
+/\ receipt = <<"scopeA/op1", "p", 1>>
+/\ causal = {}
+/\ workQueue = {}
+
+State 2: <Submit("scopeA/op1","p") line 30, col 5 to line 34, col 74 of module Admission>
+/\ pending = {}
+/\ lostAtCrash = {}
+/\ admissionCount = ("scopeA/op1" :> 0 @@ "scopeB/op1" :> 0)
+/\ commitHistory = {}
+/\ inputPayload = "p"
+/\ committedAtCrash = {}
+/\ rejected = {}
+/\ recoveredDispatch = FALSE
+/\ observedReceipts = {}
+/\ outbox = {}
+/\ recoveredReceipt = FALSE
+/\ committed = {}
+/\ inputKey = "scopeA/op1"
+/\ requests = {}
+/\ phase = "prepared"
+/\ recoveryOK = TRUE
+/\ receipt = <<"scopeA/op1", "p", 1>>
+/\ causal = {}
+/\ workQueue = {}
+
+State 3: <Commit line 40, col 8 to line 57, col 24 of module Admission>
+/\ pending = {}
+/\ lostAtCrash = {}
+/\ admissionCount = ("scopeA/op1" :> 1 @@ "scopeB/op1" :> 0)
+/\ commitHistory = {<<"scopeA/op1", "p", 1>>}
+/\ inputPayload = "p"
+/\ committedAtCrash = {}
+/\ rejected = {}
+/\ recoveredDispatch = FALSE
+/\ observedReceipts = {}
+/\ outbox = {}
+/\ recoveredReceipt = FALSE
+/\ committed = {<<"scopeA/op1", "p", 1>>}
+/\ inputKey = "scopeA/op1"
+/\ requests = {<<"scopeA/op1", "p", 1>>}
+/\ phase = "ready"
+/\ recoveryOK = TRUE
+/\ receipt = <<"scopeA/op1", "p", 1>>
+/\ causal = {}
+/\ workQueue = {<<"scopeA/op1", "p", 1>>}
+
+7 states generated, 7 distinct states found, 4 states left on queue.
+The depth of the complete state graph search is 3.
+Finished in 00s at (2026-10-03 23:48:22)

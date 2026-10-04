@@ -6,6 +6,8 @@ This document proposes concrete contracts for the [architecture draft](architect
 
 **Proposed mechanics:** the identities, records, portable receipt/event protocol, retention policy and authorization boundaries below. The [bounded TLA+ checks](../spec/README.md) test small abstractions of these mechanics. They do not establish a complete security or implementation proof.
 
+**Agreed local reliability boundary:** accepted work is committed recoverably before its pending receipt is returned. A local transactional store is the initial target, with leased worker ownership, dead-letter recovery and configurable seven-day retention for unused records. The [local reliability design](local-reliability.md) records these decisions, their proposed mechanisms and checked limits.
+
 ## Resolve the session from trusted ingress
 
 Use this external lookup key:
@@ -53,7 +55,7 @@ An incoming reply is an authenticated response to a known request. Resolve the o
 
 The proposed portable default avoids leaving an open provider-specific tool call indefinitely:
 
-1. The harness calls Brook's asynchronous dispatch tool. Brook admits dependencies, persists the request, checkpoint references and outbox intent, and returns a **pending receipt** containing the request ID. This completes that provider tool invocation; the receipt is its immediate result.
+1. The harness calls Brook's asynchronous dispatch tool. Brook admits dependencies and commits the recoverable request/session causal references, pending continuation and authorized outbox intent before returning a **pending receipt** containing the request ID. A lost receipt is recovered by retrying the same scoped operation identity within its declared retry window; a mismatched submission is rejected. This completes that provider tool invocation; the receipt is its immediate result.
 2. The session's run may finish or continue. A waiting request does not hold the active-run slot. New user messages and other work can update the same session, and several requests can remain pending.
 3. A valid later reply atomically claims the pending request, appends a correlated continuation outcome to the source session's durable history, and records a resume intent. The outcome refers to the originating logical call and request; it is not spliced into an old provider transcript as that call's delayed provider result.
 4. The scheduler claims a logical resume, checks cancellation again, and builds a fresh bounded context using current session history/projection plus retained request-specific causal material. It can start a new run through any harness that supports this portable contract.
@@ -116,7 +118,7 @@ The delivery safety claim is: every admitted effect uses the destination authori
 
 - Namespace/principal representation, authentication adapters, mapping creation, migration and deliberate aliases.
 - Concrete capability/grant evaluation, recipient resolution, sink account ownership, expiry and revocation propagation.
-- Storage transactions, ownership/fencing, active-run scheduling and crash recovery across history/outbox/resume records.
+- Concrete local storage engine/transactions, restart-safe clock basis, active-run scheduling and implementation of the agreed admission and ownership boundaries.
 - Causal selection, pin size/expiry, retention quotas, summary quality, context budgets and missing-material escalation.
 - Shared versus isolated agent destination sessions; permitted cross-namespace work.
 - Harness capability negotiation and provider-specific receipt/continuation formatting.

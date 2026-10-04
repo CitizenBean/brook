@@ -9,10 +9,10 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Delivery
 Linting of module Delivery
-Starting... (2026-10-03 22:25:34)
+Starting... (2026-10-04 00:01:39)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-10-03 22:25:34.
-Progress(12) at 2026-10-03 22:25:37: 1,329,264 states generated (1,329,264 s/min), 251,186 distinct states found (251,186 ds/min), 53,301 states left on queue.
+Finished computing initial states: 1 distinct state generated at 2026-10-04 00:01:39.
+Progress(12) at 2026-10-04 00:01:42: 1,318,244 states generated (1,318,244 s/min), 249,393 distinct states found (249,393 ds/min), 53,106 states left on queue.
 Model checking completed. No error has been found.
   Estimates of the probability that TLC did not check all reachable states
   because two distinct states had the same fingerprint:
@@ -21,4 +21,4 @@ Model checking completed. No error has been found.
 1843201 states generated, 331776 distinct states found, 0 states left on queue.
 The depth of the complete state graph search is 17.
 The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 20 and the 95th percentile is 4).
-Finished in 04s at (2026-10-03 22:25:38)
+Finished in 04s at (2026-10-04 00:01:43)
