@@ -16,6 +16,8 @@ Try the zero-config terminal recipe with `cargo run --locked -- processor-demo /
 
 The [deterministic host simulations](docs/simulation-testing.md) compose these real APIs with scripted harnesses, seeded schedules, independent oracles and process-kill recovery. They expose the missing production graph/agent bridge rather than claiming an agent loop exists.
 
+The [current extension guide](docs/extensibility.md) includes an external Rust consumer and public-API tests. The separate [extension API proposal](docs/extensibility-design.md), backed by [primary-source research](docs/extensibility-research.md), describes typed registration and graph composition that are not implemented yet.
+
 Start with the [architecture draft](docs/architecture.md), including five diagrams and the [questions for review](docs/architecture.md#questions-for-review).
 
 The [session, context and authorized-delivery proposal](docs/context-and-routing.md) develops multi-session routing, portable asynchronous resumptions and per-message sink authorization, with [bounded TLA+ checks](spec/README.md).
