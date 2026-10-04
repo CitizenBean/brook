@@ -249,6 +249,10 @@ Prometheus integration is a candidate extension. Two proposed adapter roles are:
 
 **Proposed:** keep metric labels bounded and put individual session and event identifiers in structured diagnostic records instead. This follows [Prometheus instrumentation guidance](https://prometheus.io/docs/practices/instrumentation/) on avoiding excessive cardinality. Metric names, adapters, and recording rules are not specified yet.
 
+## Bounded formal checks
+
+The [TLA+ models](../spec/README.md) explore proposed wait admission and continuation safety contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
+
 ## Questions for review
 
 1. What portable harness capabilities are required? When may an adapter reconstruct context and start a new run instead of resuming the original execution?
