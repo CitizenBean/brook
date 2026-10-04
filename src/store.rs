@@ -11,13 +11,13 @@ type Hook = Arc<dyn Fn(Boundary) + Send + Sync>;
 /// One authority per canonical directory. Share via a mutex, never open a worker DB.
 /// Local trusted host APIs; ingress authentication and policy evaluation are external.
 pub struct Store {
-    conn: Connection,
+    pub(crate) conn: Connection,
     _lock: File,
     limits: Limits,
     clock: Arc<dyn Clock>,
     clock_base: i64,
-    incarnation: i64,
-    hook: Hook,
+    pub(crate) incarnation: i64,
+    pub(crate) hook: Hook,
 }
 
 fn bounded(text: &str, max: usize) -> Result<()> {
@@ -162,10 +162,43 @@ impl Store {
             }
         })?;
         let mut conn = Connection::open(path.join("brook.sqlite3"))?;
+        let existing_meta: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='meta')",
+            [],
+            |r| r.get(0),
+        )?;
+        if existing_meta {
+            let version: i64 =
+                conn.query_row("SELECT schema_version FROM meta WHERE id=1", [], |r| {
+                    r.get(0)
+                })?;
+            if ![1, 2].contains(&version) {
+                return Err(Error::Invalid("unsupported database schema"));
+            }
+            if version == 2 {
+                let processing: bool = conn.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='processing_meta')",
+                    [],
+                    |r| r.get(0),
+                )?;
+                if !processing {
+                    return Err(Error::Invalid("incompatible experimental schema v2"));
+                }
+                let unsupported: bool = conn.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM processing_meta WHERE version != 1)",
+                    [],
+                    |r| r.get(0),
+                )?;
+                if unsupported {
+                    return Err(Error::Invalid("unsupported processing schema"));
+                }
+            }
+        }
         conn.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=64; PRAGMA journal_size_limit=1048576; PRAGMA cache_size=-2048;")?;
-        conn.execute_batch(include_str!("schema.sql"))?;
+
         let config = serde_json::to_string(&limits)?;
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.execute_batch(include_str!("schema.sql"))?;
         tx.execute(
             "INSERT OR IGNORE INTO meta VALUES(1,1,lower(hex(randomblob(16))),0,0,?)",
             [&config],
@@ -175,9 +208,18 @@ impl Store {
             [],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
         )?;
-        if schema != 1 || saved != config {
+        if ![1, 2].contains(&schema) || serde_json::from_str::<Limits>(&saved)? != limits {
             return Err(Error::Invalid("schema or persisted limits mismatch"));
         }
+        // Transactional v1 -> v2 migration leaves every original canonical request unchanged.
+        tx.execute_batch(include_str!("processing/schema.sql"))?;
+        tx.execute("UPDATE meta SET schema_version=2 WHERE id=1", [])?;
+        tx.execute("UPDATE processing_state SET owner=NULL,deadline=0", [])?;
+        tx.execute(
+            "UPDATE processing_deliveries SET status='pending' WHERE status='running'",
+            [],
+        )?;
+        tx.execute("UPDATE processing_deliveries SET status='unknown',failure='interrupted terminal attempt' WHERE status IN ('printing','write_started')", [])?;
         let incarnation = increment(incarnation)?;
         tx.execute("UPDATE meta SET incarnation=? WHERE id=1", [incarnation])?;
         tx.execute("UPDATE sessions SET owner=NULL,deadline=0", [])?;
@@ -204,7 +246,7 @@ impl Store {
     pub fn limits(&self) -> &Limits {
         &self.limits
     }
-    fn begin(&mut self) -> Result<(Transaction<'_>, i64)> {
+    pub(crate) fn begin(&mut self) -> Result<(Transaction<'_>, i64)> {
         let elapsed = self.clock.elapsed_ms();
         if elapsed < 0 {
             return Err(Error::Invalid("clock regressed"));
@@ -421,7 +463,7 @@ impl Store {
             )
             .optional()?;
         if let Some((request, saved)) = old {
-            if saved != canonical {
+            if serde_json::from_str::<Submission>(&saved)? != *input {
                 return Err(Error::Conflict);
             }
             tx.commit()?;

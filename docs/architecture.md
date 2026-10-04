@@ -2,12 +2,12 @@
 
 Brook is a Rust event-processing platform with optional agents and swappable agentic harnesses. Its purpose is to keep routine work inexpensive: record what happened, update state, and use rules or small classifiers before starting a costly model-backed run. Extensibility, clean interfaces, easy use, and useful defaults guide the design.
 
-This is a documentation-only proposal. **Agreed** describes foundations already accepted for the project. **Proposed** identifies a concrete starting point for review. **Open** marks decisions that still affect the contracts. None of these sections describes implemented behavior or a stable API.
+This document describes the broad architecture; [local core](local-core.md) and [processor runtime](processors.md) separately document implemented experimental subsets. **Agreed** describes foundations already accepted for the project. **Proposed** identifies a concrete starting point for review. **Open** marks decisions that still affect the contracts. These labels are design status, not a claim of implementation or a stable API.
 
 ## Agreed foundations
 
 - Events can originate from users, Home Assistant, or other systems.
-- Processing forms a general operator graph. Operators can route to other processors, one or many agents, or directly to sinks. Agents are optional.
+- A Processor is a general executable graph component. An Operator is a routing-specialized Processor and may also transform data. Configured paths can insert transforms anywhere without changing operator code or returning to a dispatcher. Operators choose logical branches; configuration defines concrete next paths. Agents are optional processors.
 - Agents can use any agentic harness through a portable integration boundary. They can send messages themselves, including work for another agent or system. A more integrated native harness is an option to propose.
 - Tools support synchronous execution and asynchronous messages. Async dispatch checkpoints the context that led to the message; the tool defines whether a return is expected. A return must recover that context or insert it when missing, correlate to its continuation, and preserve newer session activity.
 - Dynamically evaluate circular dependencies and reject them, with retries the stated exception. The scope of a dependency is still to confirm.
@@ -55,11 +55,15 @@ A source adapter normalizes input and publishes an event. Operators consume even
 
 Rules, JEV/CLEF, LightGBM, and custom UDFs are candidate processing options. Their contracts and suitability need evaluation. This draft does not assume an architecture or runtime for JEV/CLEF, or select a model library.
 
-**Proposed:** operators expose named output ports that configuration connects to operators, topics, or sinks. One result may fan out to several destinations. Direct addressing is an alternative still to review. A compact decision vocabulary could include `Ignore`, `RecheckAt`, and `Dispatch` to one or more destinations, with a reason and references to relevant context. These are conceptual names, not Rust types. `Ignore` means no downstream activation for that decision; it does not undo the state update or delete the event.
+**Agreed:** ordinary transforms continue along configured paths; routing operators select named logical branches. One result may fan out to several configured destinations, subject to independent authorization. Zero output requires an explicit suppression reason and does not undo the state update or delete the event. The [local processor runtime](processors.md) implements this contract for bounded DAGs; timers and feedback are deferred.
 
 Agents send messages through the graph, including agent-to-agent requests and output to other systems. Replies and timed follow-ups return through the stream. **Proposed:** time, step, token, retry, and follow-up budgets bound feedback; cancellation invalidates outstanding continuations.
 
 **Open:** routing failures, classifier uncertainty, and invalid results need explicit policies. Critical user input must not silently disappear because a cheap stage fails. Retry, quarantine, and a configured fallback route are candidates; a universal fallback has not been chosen.
+
+## Easy configuration and control plane
+
+Common use cases should work with defaults and brief guided setup, without elaborate YAML. Recipes and optional advanced overrides must compile to the same validated graph. The [control-plane design](control-plane.md) covers typed CLI/wizard/agent setup, read-only connector discovery, versioned activation, and the requested live web view of DAG structure and processing. Only graph registration/validation, a terminal recipe and durable inspection are implemented; connectors, management service and web UI remain planned.
 
 ## Events and topic semantics
 

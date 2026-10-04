@@ -1,4 +1,6 @@
+use brook::processing::*;
 use brook::*;
+use serde_json::json;
 use std::{path::Path, sync::Arc};
 
 fn open(path: &Path) -> Result<Store> {
@@ -94,13 +96,112 @@ fn demo(path: &Path) -> Result<()> {
     println!("PASS: stable receipt, two isolated sessions, B before A, both results retained.");
     Ok(())
 }
+fn terminal_setup(path: &Path, uppercase: bool) -> Result<(Store, TerminalClient, Graph)> {
+    let mut store = open(path)?;
+    store.configure_processing(ProcessingLimits::default())?;
+    let identity = TerminalIdentity::local();
+    let client = store.terminal_client(identity.clone())?;
+    let binding = Version::new("stdout", 1);
+    store.bind_terminal(&binding, &client)?;
+    let mut graph = terminal_recipe(&identity, binding)?;
+    if uppercase {
+        graph.version = 2;
+        insert_uppercase(&mut graph)?;
+    }
+    store.register_graph(&graph)?;
+    Ok((store, client, graph))
+}
+fn processor_demo(path: &Path) -> Result<()> {
+    if path.join("brook.sqlite3").exists() {
+        return Err(Error::Invalid("demo requires a new store directory"));
+    }
+    let (mut store, client, graph) = terminal_setup(path, false)?;
+    let id = store.submit_terminal(
+        &client,
+        &graph.pipeline,
+        graph.version,
+        "first",
+        json!("hello from the terminal"),
+    )?;
+    println!("Durable input receipt: {}", id.0);
+    run_terminal_recipe(&mut store, &client, &mut std::io::stdout().lock())?;
+    drop(store);
+    let (mut store, client, graph) = terminal_setup(path, true)?;
+    assert_eq!(
+        store.submit_terminal(
+            &client,
+            &graph.pipeline,
+            1,
+            "first",
+            json!("hello from the terminal")
+        )?,
+        id
+    );
+    store.submit_terminal(
+        &client,
+        &graph.pipeline,
+        graph.version,
+        "second",
+        json!("transform inserted after the same router"),
+    )?;
+    run_terminal_recipe(&mut store, &client, &mut std::io::stdout().lock())?;
+    println!("PASS: durable receipt survives restart; graph v2 inserts uppercase without router changes.");
+    Ok(())
+}
+fn command(args: &[String]) -> Result<()> {
+    if args.len() == 3 && args[1] == "demo" {
+        return demo(Path::new(&args[2]));
+    }
+    if args.len() == 3 && args[1] == "processor-demo" {
+        return processor_demo(Path::new(&args[2]));
+    }
+    if args.len() == 5 && matches!(args[1].as_str(), "terminal" | "terminal-uppercase") {
+        let (mut store, client, graph) =
+            terminal_setup(Path::new(&args[2]), args[1] == "terminal-uppercase")?;
+        let id = store.submit_terminal(
+            &client,
+            &graph.pipeline,
+            graph.version,
+            &args[3],
+            json!(args[4]),
+        )?;
+        eprintln!(
+            "receipt {} (reuse operation ID only for the same input and graph version)",
+            id.0
+        );
+        run_terminal_recipe(&mut store, &client, &mut std::io::stdout().lock())?;
+        return Ok(());
+    }
+    if args.len() == 3 && args[1] == "terminal-run" {
+        let (mut store, client, _) = terminal_setup(Path::new(&args[2]), false)?;
+        run_terminal_recipe(&mut store, &client, &mut std::io::stdout().lock())?;
+        return Ok(());
+    }
+    if args.len() == 4 && args[1] == "inspect" {
+        let store = open(Path::new(&args[2]))?;
+        let id = args[3].parse().map_err(|_| Error::Invalid("delivery ID"))?;
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&store.inspect_processing(DeliveryId(id))?)?
+        );
+        return Ok(());
+    }
+    if args.len() == 4 && args[1] == "graph" {
+        let store = open(Path::new(&args[2]))?;
+        let version = args[3]
+            .parse()
+            .map_err(|_| Error::Invalid("graph version"))?;
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&store.effective_graph("local", "terminal", version)?)?
+        );
+        return Ok(());
+    }
+    Err(Error::Invalid("usage: brook processor-demo <new-dir> | terminal[-uppercase] <dir> <operation-id> <text> | terminal-run <dir> | inspect <dir> <delivery-id> | graph <dir> <version> | demo <new-dir>"))
+}
 fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().collect();
-    let result = if args.len() == 3 && args[1] == "demo" {
-        demo(Path::new(&args[2]))
-    } else {
-        Err(Error::Invalid("usage: brook demo <new-store-directory>"))
-    };
+    let result = command(&args);
     match result {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {

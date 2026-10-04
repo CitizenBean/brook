@@ -1,0 +1,77 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module ProcessorCommit
+Linting of module ProcessorCommit
+Starting... (2026-10-04 11:08:34)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-04 11:08:34.
+Error: Invariant AtomicState is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ done = FALSE
+/\ validRoute = TRUE
+/\ authorized = TRUE
+/\ printState = "pending"
+/\ snapshotRevision = 0
+/\ writes = 0
+/\ generation = 1
+/\ quota = 2
+/\ acceptedFence = TRUE
+/\ children = {}
+/\ result = FALSE
+/\ stateCommitted = FALSE
+/\ acceptedAuthority = TRUE
+/\ receipts = 0
+/\ prepared = FALSE
+/\ commits = 0
+/\ acceptedRoute = TRUE
+/\ acceptedState = TRUE
+/\ admitted = FALSE
+/\ revision = 0
+/\ snapshotGeneration = 0
+
+State 2: <Admit line 21, col 10 to line 25, col 68 of module ProcessorCommit>
+/\ receipts = 1
+/\ admitted = TRUE
+
+State 3: <Prepare line 32, col 12 to line 38, col 70 of module ProcessorCommit>
+/\ receipts = 1
+/\ prepared = TRUE
+/\ admitted = TRUE
+/\ snapshotGeneration = 1
+
+State 4: <Commit line 50, col 11 to line 65, col 54 of module ProcessorCommit>
+/\ done = TRUE
+/\ validRoute = TRUE
+/\ authorized = TRUE
+/\ printState = "pending"
+/\ snapshotRevision = 0
+/\ writes = 0
+/\ generation = 1
+/\ quota = 2
+/\ acceptedFence = TRUE
+/\ children = {"a", "b"}
+/\ result = TRUE
+/\ stateCommitted = FALSE
+/\ acceptedAuthority = TRUE
+/\ receipts = 1
+/\ prepared = TRUE
+/\ commits = 1
+/\ acceptedRoute = TRUE
+/\ acceptedState = TRUE
+/\ admitted = TRUE
+/\ revision = 0
+/\ snapshotGeneration = 1
+
+27 states generated, 27 distinct states found, 16 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-10-04 11:08:34)

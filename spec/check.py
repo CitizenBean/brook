@@ -9,6 +9,19 @@ import subprocess
 import tempfile
 
 CASES = {
+    "ProcessorCommit-repeatWrite": "SingleWrite",
+    "ProcessorCommit": None,
+    "ProcessorCommit-duplicate": 'DeduplicatedAdmission',
+    "ProcessorCommit-partialFanout": 'AtomicFanout',
+    "ProcessorCommit-omitResult": 'AtomicResult',
+    "ProcessorCommit-omitState": 'AtomicState',
+    "ProcessorCommit-repeatCommit": 'CompletionOnce',
+    "ProcessorCommit-staleOwner": 'FencedOwner',
+    "ProcessorCommit-staleState": 'FreshState',
+    "ProcessorCommit-unauthorized": 'AuthorizedRoutes',
+    "ProcessorCommit-unknownRoute": 'KnownRoutes',
+    "ProcessorCommit-overQuota": 'BoundedFanout',
+    "ProcessorCommit-blindResend": 'NoBlindResend',
     "LocalExecution": None,
     "LocalExecution-terminalUnpin": "LiveDependenciesPinned",
     "LocalExecution-blindResend": "NoBlindResend",
