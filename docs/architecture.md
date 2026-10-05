@@ -1,278 +1,221 @@
-# Brook architecture draft
+# Brook architecture
 
-Brook is a Rust event-processing platform with optional agents and swappable agentic harnesses. Its purpose is to keep routine work inexpensive: record what happened, update state, and use rules or small classifiers before starting a costly model-backed run. Extensibility, clean interfaces, easy use, and useful defaults guide the design.
+Brook is a Rust event-processing platform that runs agents when they add value.
+Cheap rules, state updates and classifiers handle routine events; agents use
+swappable harnesses for work that needs reasoning. The design below defines the
+intended contracts. [Status and limits](#status-and-limits) distinguish them from
+the current implementation.
 
-This is a documentation-only proposal. **Agreed** describes foundations already accepted for the project. **Proposed** identifies a concrete starting point for review. **Open** marks decisions that still affect the contracts. None of these sections describes implemented behavior or a stable API.
+## One event flow
 
-## Agreed foundations
-
-- Events can originate from users, Home Assistant, or other systems.
-- Processing forms a general operator graph. Operators can route to other processors, one or many agents, or directly to sinks. Agents are optional.
-- Agents can use any agentic harness through a portable integration boundary. They can send messages themselves, including work for another agent or system. A more integrated native harness is an option to propose.
-- Tools support synchronous execution and asynchronous messages. Async dispatch checkpoints the context that led to the message; the tool defines whether a return is expected. A return must recover that context or insert it when missing, correlate to its continuation, and preserve newer session activity.
-- Dynamically evaluate circular dependencies and reject them, with retries the stated exception. The scope of a dependency is still to confirm.
-- Inexpensive deterministic or model-backed processing should reduce unnecessary agent activations and token use.
-- Kafka-like topics should support interchangeable in-memory, local on-disk, and Kafka backends.
-- Wasm is the preferred direction for portable user-defined functions.
-- Outgoing messages must reach the sink/account/recipient authorized for that specific message. An explicit user request may authorize another channel, such as email from a chat session; the originating reply route is not a universal destination restriction.
-- Durable event and session history are distinct from the limited context presented to a model. The same event may update state and be evaluated at several stages.
-- Context compaction produces a lossy summary snapshot plus a recent tail. The covered history range is recorded; original history follows a separate retention policy.
-- Client conversation identifiers are resolved and validated into internal, namespaced session identifiers. Device and world state enter conversation context only when relevant.
-
-- Durable admission before acknowledgement, local transactional ownership/leases, dead-letter recovery, bounded resources and configurable seven-day retention of unused records are now agreed directions; see the [local reliability design](local-reliability.md) for scope and proposed mechanics.
-
-## The operator graph
-
-```mermaid
-flowchart TB
-    accTitle: Brook operator and agent graph
-    accDescr: Operators route directly to sinks, to processors, or to agents using swappable harnesses. Agents send messages to other agents and systems. Timed follow-ups return through topics.
-    sources["Sources<br/>Users · Home Assistant · other systems"]
-    topics["Topics"]
-    operator["Operator<br/>Rule · classifier · UDF"]
-    next["Another operator"]
-    agents["Agent A<br/>Swappable harness"]
-    agentb["Agent B<br/>Swappable harness"]
-    sinks["Sinks and systems<br/>Terminal · Discord · Kafka"]
-    timer["Follow-up timer<br/>Durability proposed"]
-    sources --> topics
-    topics --> operator
-    operator -->|direct output| sinks
-    operator -->|further processing| next
-    operator -->|dispatch| agents
-    next -->|direct output| sinks
-    next -->|dispatch| agents
-    agents -->|message| agentb
-    agents -->|message| sinks
-    agentb -->|message| sinks
-    agents -->|schedule| timer
-    timer -->|due event| topics
+```text
+ingress → graph/processors → agent → asynchronous work → reply → sink
 ```
 
-*General routing and agent messaging are agreed. The feedback path assumes the proposed dependency scope below. Wiring, timer durability, and routing APIs remain proposals. [Editable Mermaid](diagrams/operator-graph.mmd) · [SVG view](diagrams/operator-graph.svg).*
+An event need not visit every stage. A processor can suppress it, transform it,
+route it directly to a sink, or activate one or more agents. An agent is a graph
+node, and awaited work is durable work whose result is delivered back to its
+origin. The common work unit is a graph-node delivery. Agent execution and awaited
+result delivery extend that model while retaining their own domain records.
 
-A source adapter normalizes input and publishes an event. Operators consume events and may update state, classify, transform, suppress further work, or emit results. A direct user message can use a simple rule that wakes an agent. A sensor change may require only a state update. A known alert can go straight to a notification sink without an LLM.
+![Ingress, processors, agents and durable result delivery](diagrams/operator-graph.svg)
 
-Rules, JEV/CLEF, LightGBM, and custom UDFs are candidate processing options. Their contracts and suitability need evaluation. This draft does not assume an architecture or runtime for JEV/CLEF, or select a model library.
+[Editable flow](diagrams/operator-graph.mmd). The returning result starts a fresh
+origin invocation; it is not an unbounded back-edge in the processing DAG.
 
-**Proposed:** operators expose named output ports that configuration connects to operators, topics, or sinks. One result may fan out to several destinations. Direct addressing is an alternative still to review. A compact decision vocabulary could include `Ignore`, `RecheckAt`, and `Dispatch` to one or more destinations, with a reason and references to relevant context. These are conceptual names, not Rust types. `Ignore` means no downstream activation for that decision; it does not undo the state update or delete the event.
+1. **Ingress.** A producer authenticates its source and normalizes an event.
+   Brook atomically checks its scoped operation identity, reserves capacity and
+   records admission. The receipt confirms durable local acceptance, not eventual
+   downstream delivery. A client combines a producer and a sink: the terminal is
+   the first client, not the core source/sink abstraction.
+2. **Graph/processors.** A Processor is the general node: it may update state,
+   transform, filter, classify or emit outputs. An Operator specializes a
+   Processor by choosing declared logical branches. Configuration connects those
+   branches to paths. Inserting a transform anywhere on a configured path does
+   not require the router to know about it or change its code.
+3. **Agent.** A configured agent node receives bounded context and invokes its
+   chosen harness. `AgentConfig` describes behavior, tools, model settings and
+   budgets; the harness implements execution. Neither identifies the session.
+   Any compatible harness can participate; a native Brook harness is optional.
+4. **Asynchronous work.** The agent submits an authorized work intent through
+   the same admission and delivery machinery. Fire-and-forget needs no result
+   continuation. Await-result records correlation, expected responder, origin,
+   causal references and expiry before dispatch. The immediate tool result is a
+   pending receipt, so the agent need not remain suspended while waiting.
+5. **Reply.** Brook authenticates and correlates the outcome, then atomically
+   records it and its origin delivery. A fresh invocation receives current
+   context plus exact request-specific evidence. Newer session activity remains
+   intact even when replies arrive out of order.
+6. **Sink.** Every external intent pins its authorized sink, account, recipient
+   and data scope. Logical routing does not grant permission. The sink records
+   success, confirmed non-application or an unknown outcome; uncertainty never
+   triggers a blind resend.
 
-Agents send messages through the graph, including agent-to-agent requests and output to other systems. Replies and timed follow-ups return through the stream. **Proposed:** time, step, token, retry, and follow-up budgets bound feedback; cancellation invalidates outstanding continuations.
+## One durable execution and delivery model
 
-**Open:** routing failures, classifier uncertainty, and invalid results need explicit policies. Critical user input must not silently disappear because a cheap stage fails. Retry, quarantine, and a configured fallback route are candidates; a universal fallback has not been chosen.
+A local transactional authority owns admission/deduplication, delivery state,
+leases and generation fencing, node/session state, outbox intents, recovery and
+resource accounting. A transaction covers one durable step, not an entire graph
+or an LLM/network call. A successful processor commit records proposed state,
+all downstream deliveries and input completion atomically. Awaited requests add
+correlation and origin-result delivery to this model rather than creating another
+scheduler with different durability rules.
 
-## Events and topic semantics
+Work pins graph, code, config, schema and destination-binding versions. A new
+configuration cannot reinterpret an existing delivery or redirect an old intent.
+State compatibility must be validated before activation; incompatible state
+requires a reviewed migration or a new scope. Retries preserve logical identity
+while advancing bounded physical attempts. A repeated evaluation can produce
+only one accepted logical result; this does not promise one physical execution.
 
-**Proposed event envelope:** stable event identity, source, type, schema version, occurrence and receipt times, routing key, payload, and correlation or causation references. Session identity is optional because many events are unrelated to conversations. Trace metadata should make a decision explainable without copying a large payload through every stage.
+Worker heartbeats renew authoritative leases. Reassignment increments a
+persistent ownership generation; state/result/effect-admission commits reject
+stale or expired tokens. Ownership generation, cancellation generation and
+context revision are distinct. Invocation cancellation fences its later commits.
+Pipeline draining stops new ingress admission while admitted work settles.
+Neither can retract an already admitted external effect.
 
-[CloudEvents](https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md) provides a useful reference for interoperable event metadata and source-scoped identity. Adopting its envelope, bindings, and extension conventions is an open choice.
+The [local reliability contract](local-reliability.md) defines restart, failure,
+capacity and retention rules. Unknown effects remain quarantined until suitable
+adapter evidence or an explicitly authorized safe recovery action resolves them.
 
-The proposed topic contract is:
+## Sessions and bounded context
 
-- Preserve order within a routing key, with no global-order promise. Define how concurrent producers and late source events are reconciled.
-- Give independent subscriptions their own view and cursor. Workers sharing one subscription divide its work; separate subscriptions enable fan-out.
-- Expect at-least-once delivery where durable delivery is supported. Preserve stable identities and make state updates and effects safe to repeat.
-- Expose acknowledgements, replay positions, retention limits, and backend durability capabilities explicitly.
-- Define bounded buffering and backpressure. A slow agent or sink should not turn into an unbounded queue in process memory.
+Resolve `(authenticated namespace, trusted client, external conversation)` into
+an opaque internal session. Payload fields cannot select another session or
+principal. Agent-to-agent work has a source session, an authorized destination
+work scope and a durable return binding; the destination never becomes the
+origin merely because it processes the request.
 
-These are proposed Brook semantics, informed by [Kafka's partition, consumer, and delivery model](https://kafka.apache.org/41/design/design/). The exact mapping to each backend still needs design and tests. Topic retention bounds replay; a promise of durable session history cannot depend on an input topic retaining every event forever.
+The proposed initial scheduling policy allows one active agent invocation per
+session. Waiting requests release that slot, so later activity and other replies
+can advance the session. Resume
+admission checks current revision and cancellation; a race causes reconstruction
+or an explicit failure, never restoration of an old transcript. The
+[context and routing contract](context-and-routing.md) defines the portable
+pending-receipt/result flow.
 
-## State history and model context
+![Protected evidence and bounded context](diagrams/state-and-context.svg)
 
-```mermaid
-flowchart TB
-    accTitle: Brook history state and context
-    accDescr: Durable event history supports current state and session history. Selected evidence and a summary snapshot plus recent tail form bounded model context. The boxes are logical views rather than chosen physical stores.
-    input["Incoming events"]
-    history["Durable event history<br/>Independent retention"]
-    state["World and operator state<br/>Cheap updates"]
-    session["Session history<br/>Durable session activity"]
-    evidence["Selected evidence<br/>Facts + event references"]
-    summary["Summary snapshot + tail<br/>Recorded covered range"]
-    context["Model context<br/>Bounded for this run"]
-    run["Agent run"]
-    input --> history
-    history -->|apply changes| state
-    history -->|session activity| session
-    history -->|select events| evidence
-    state -->|relevant facts| evidence
-    session -->|project + compact| summary
-    evidence --> context
-    summary --> context
-    context --> run
-```
+[Editable context view](diagrams/state-and-context.mmd).
 
-*Agreed separation; proposed logical views. Boxes do not require separate databases, and ownership and consistency are open. [Editable Mermaid](diagrams/state-and-context.mmd) · [SVG view](diagrams/state-and-context.svg).*
+Context assembly selects exact protected causal evidence, a recent tail and
+relevant current facts within an explicit budget. Pluggable compactors can
+produce text, structured summaries or other historical representations with
+source coverage and format versions. Pluggable retrievers select evidence from
+authorized scopes; session-history references must belong to the same session.
+External-corpus retrieval carries its own source identity and access checks.
 
-Three responsibilities need to remain distinguishable:
+A run does not require the entire historical transcript. Lossy representations
+cannot replace required instructions, logical call/receipt/outcome associations
+or other protected raw evidence. Missing or oversized required evidence fails
+explicitly. Compaction changes context representation, not authority, history
+identity or cancellation. It is not garbage collection: configurable seven-day
+unused retention has separate eligibility rules and protects live references.
 
-1. **Durable history** records events and the session activity needed for inspection, recovery, and later context selection, subject to retention.
-2. **Current state** represents the latest useful world, device, or operator facts. Updating a temperature or device status can be cheap and does not require a prompt.
-3. **Model context** is a bounded projection assembled for a particular run from relevant history, current facts, instructions, and available tools.
+## Easy setup and extension boundaries
 
-Context summaries are lossy and record their covered range and sources. A recent tail preserves nearby detail; originals remain available for retrieval or rebuilding within their separate retention policy. This semantic compaction is separate from Kafka's key-based log compaction.
+Useful defaults should cover the common 80% of workflows without complex YAML;
+that is a product goal, not a measured result. Start with a terminal recipe,
+then offer advanced graph composition when needed. Recipes, a Rust builder,
+configuration imports and a future editor must use the same graph compiler.
 
-For Home Assistant, a flood of raw device events should update the relevant state view without becoming a growing conversation transcript. If an agent is activated, its context might include the current device status, last healthy observation, outage duration, and selected related events.
+Typed extension configuration and descriptors bind code, input/output/state
+schemas, initial state and routing capabilities. A registry supplies configured
+implementations. Simple map/filter/stateful/route helpers should avoid forcing
+extension authors to handle leases or envelopes. The host validates proposals
+and commits them; retriable evaluation must not perform irreversible network
+writes. Native extensions retain host-process authority. Wasm is a preferred
+future portable boundary with explicit capabilities and budgets, not an existing
+sandbox or a selected runtime.
 
-**Open:** Brook could maintain a materialized world-state view, fetch state from connectors on demand, or combine both. An initial snapshot, change-stream continuity, freshness, and reconnect reconciliation need a defined contract. A missing or stale observation must be distinguishable from a confirmed state. Storage and distributed consistency choices remain open.
+The typed control plane separates discovery, draft, validation, preview,
+activation and status. An assisting agent can discover authorized connector
+capabilities and prepare a concrete configuration preview. Discovery does not
+actuate devices, grant permissions or activate subscriptions. Activation checks
+draft revision, state compatibility and current authority; credentials remain
+opaque references rather than event/config-preview content.
 
-## Harnesses sessions and continuations
+A future web DAG view should show configured paths alongside actual deliveries,
+queue counts, selected branches, errors and uncertain outcomes. Observation is
+read-only by default. Editing, activation, cancellation and replay are separately
+authorized actions. Bounded telemetry must expose dropped updates and recover
+with a consistent snapshot; slow viewers must not block durable completion.
 
-**Agreed:** agentic harnesses are swappable. Brook supplies integration tools for graph messaging and synchronous or asynchronous work. An agent can queue work for another agent or system and continue when the expected data returns. **Proposed:** a native Brook harness offers tighter integration alongside adapters for other harnesses; it is not required for graph participation.
+## Sources, transport and follow-ups
 
-**Proposed identities:** an agent definition describes behavior and capabilities, a session groups durable activity, and a run is a bounded execution. Client conversation identifiers resolve within an authorized namespace. One active run per session with a mailbox is a proposed starting policy. An awaited continuation need not occupy an active run slot; newer events may advance the session meanwhile. Shared versus isolated multi-agent sessions, ownership, and batching remain open.
+Sources and sinks are generic adapters for clients and systems. Topic backends
+may be in-memory, local on-disk or Kafka, with explicit durability, ordering,
+subscription, replay and backpressure capabilities. Ephemeral acceptance cannot
+claim durable restart guarantees. A transport backend does not replace the
+shared execution authority or solve external exactly-once delivery.
 
-### Session routing and context recovery
+The generic ingress envelope carries source-scoped event identity, payload type/
+schema, causation/correlation and a validated partition/routing key. Session
+identity is optional: device and system events need not be conversations.
+Partition keys select ordering/state scopes; they do not grant sink authority.
+Destination bindings remain a separate, authorized part of each outgoing intent.
 
-The [session, context and authorized-delivery proposal](context-and-routing.md) defines the next concrete contracts for review. External `(authenticated namespace, trusted adapter client, conversation ID)` keys resolve to stable internal sessions. Replies return through the stored request’s source session and expected responder binding. Multiple pending requests can complete out of order while new session activity continues. Retained causal references support a fresh bounded context without rolling history back. Each outgoing message has its own authorized sink/account/recipient binding, so an explicit email request may leave a chat session through an email sink.
+![Transport adapters and shared execution authority](diagrams/transport-boundary.svg)
 
-### Tool execution
+[Editable transport boundary](diagrams/transport-boundary.mmd).
 
-Synchronous tools return through the harness's ordinary tool-call flow. Async tools declare whether they are **fire-and-forget** or **await-result**. Fire-and-forget records the outgoing work without creating a result continuation. Await-result captures what the agent will need when a correlated reply arrives. **Proposed portable default:** the dispatch tool completes with a pending receipt; a later correlated outcome becomes a new continuation event, and a fresh run receives current context plus retained causal material. The receipt and transport acknowledgement are not the eventual work outcome. Exact suspended-tool resumption is an optional advertised harness capability.
+For example, a device temperature change can update current state without
+starting an agent. An unavailable device can schedule bounded durable follow-up
+work. When due, a new admitted event checks fresh state and either stops, alerts
+a sink, or activates an agent with selected evidence. Gaps in source continuity
+remain visible; stale data is not proof of a continuing outage.
 
-```mermaid
-flowchart TB
-    accTitle: Brook asynchronous continuation
-    accDescr: An async tool declares whether a return is expected. Before dispatch, persist its context checkpoint, request, and output intent. A valid correlated return builds current context with retained logical call and outcome references. Stale or duplicate replies do not resume the continuation.
-    call["Async tool call<br/>Declares reply mode"]
-    checkpoint["Persist before dispatch<br/>Checkpoint + request + output intent"]
-    send["Dispatch message<br/>Agent or external system"]
-    oneway["Fire-and-forget<br/>No result continuation"]
-    reply["Await-result<br/>Correlated return event"]
-    valid{"Valid continuation?<br/>ID · cancellation · status"}
-    ignore["Do not resume<br/>Duplicate · cancelled · expired"]
-    context["Current context + causal refs<br/>Keep logical call/outcome"]
-    run["Continue through harness<br/>Keep newer session activity"]
-    call --> checkpoint
-    checkpoint --> send
-    send -->|no return expected| oneway
-    send -->|return expected| reply
-    reply --> valid
-    valid -->|invalid or already handled| ignore
-    valid -->|valid| context
-    context --> run
-```
+[Recheck example](diagrams/home-assistant-recheck.svg) ·
+[Editable example](diagrams/home-assistant-recheck.mmd).
 
-*Checkpointed async context and tool-defined replies are agreed requirements. The persistence sequence, correlation fields, and resume policy below are proposed. [Editable Mermaid](diagrams/async-continuation.mmd) · [SVG view](diagrams/async-continuation.svg).*
+The initial graph scope is a static DAG. An awaited result returns through a
+stored origin binding as a separate invocation, not through an arbitrary graph
+cycle. Broader dynamic waits, agent chains and message-only feedback need an
+explicit admission contract. Outstanding-wait cycle detection is one modeled
+candidate: concurrent checks and insertion must be atomic, and retries retain
+logical identity. It does not itself prevent fire-and-forget loops. Causation,
+hop/time/work budgets and terminal cleanup remain required design work before
+expanding that scope.
 
-**Proposed continuation contract:**
+## Status and limits
 
-1. Before accepting awaited work, perform the dependency admission described below. Before dispatch, durably coordinate a context checkpoint, request record, and output intent. Capture the originating tool call and causal context, directly or by durable references. Record request/continuation correlation, tool-call identity, expected reply shape, harness/configuration version, cancellation generation, and context revision. The storage protocol is open; a crash must not leave delivered work without its recovery record.
-2. Dispatch through the graph. Validate returning correlation, reply shape, cancellation generation, and pending status. A newer context revision alone does not invalidate a reply. Atomically claim the pending continuation, record the reply, and enqueue its resume, or use an equivalent crash-safe protocol. Duplicate replies cannot claim it twice; cancellation or timeout closes it. Late results cannot revive it. Retry and failure policies preserve request and effect identities.
-3. Resolve retained causal references and build a fresh bounded context using current session activity plus the originating material and correlated outcome. In the portable mode, the original provider tool call already has its pending-receipt result; the later outcome is fresh continuation input, not a stale provider result spliced into an advanced transcript. Use version checks and a deliberate append, merge, or branch policy; never replace newer context with an old snapshot. Missing required material produces an explicit recovery failure. Exact conflict and retention mechanisms remain open.
+This architecture branch contains design documents and bounded TLA+ artifacts.
+The downstream experimental Rust work supplies a local transactional core,
+processor DAGs, typed Rust adapters, terminal effects and deterministic/crash
+simulations. Its awaited-request and processor paths share Store/SQLite and the
+local authority but duplicate work lifecycle machinery and lack a production bridge.
+That gap is not the intended architecture; unification must preserve distinct
+correlation/session records and applied/not-applied/unknown effect outcomes.
 
-A checkpoint is a portable context/reconstruction record, optionally supplemented by a harness-specific resume handle. It does not promise serialization of arbitrary third-party runtime internals. **Open:** adapters need capability negotiation for context export/import, result insertion, resumable execution, and cancellation. Constructing fresh context and starting a new run is the proposed portable default. Exact same-execution resumption is an optional adapter capability with its own compatibility requirements. Unsupported modes must be explicit; fallback policy is still to decide.
+There is no selected production agent loop, stable extension API, generic
+connector lifecycle, web control plane, Kafka/Wasm integration or distributed
+execution contract. Terminal-specific APIs are the initial implementation slice,
+not the desired generic core. The current context builder requires all retained
+session history to fit its byte budget; it can fail even when a smaller evidence selection would suffice.
+Explicit failure handling does not restore context fit. Trusted reconstruction
+and comparison protect against forged context; a future opaque context token
+could preserve that trust without repeating assembly. Bounded selection, the
+separate compaction/retrieval experiment and seven-day collection still need
+integration. Retained-record quotas do not by themselves prove physical
+RAM/disk bounds under arbitrary native code or storage failure.
 
-### Dynamic dependency evaluation
-
-**Agreed requirement:** dynamically reject circular dependencies, with retries the exception. **Proposed scope, still to confirm:** track outstanding logical work and waits separately from routing topology. Synchronous calls and async await-result work both participate. Reject a new wait when it creates a direct or indirect cycle, such as A waiting for B while B waits for A. Returning messages or later follow-ups may revisit an agent without adding a wait cycle under this interpretation.
-
-**Proposed:** checking for a cycle and accepting its dependency must be one race-safe operation across concurrent or distributed additions. Remove active wait edges on terminal completion, cancellation, or timeout. Retries retain logical work identity with bounded attempt identities; renaming a retry cannot bypass cycle detection. Storage and coordination mechanisms remain open.
-
-Fire-and-forget messages can circulate without wait edges. They need separate causation tracking and hop, time, or work budgets. Those limits bound routing loops; they do not prove dependency acyclicity. Whether this requirement also rejects message-only loops remains an explicit review question.
-
-## Home Assistant example
-
-```mermaid
-flowchart TB
-    accTitle: Home Assistant recheck example
-    accDescr: Update state before evaluating an event. Small temperature changes stop without an agent. A device outage schedules a durable recheck. The due event examines fresh state, then either stops after recovery or routes to an alert sink or agent.
-    event["Home Assistant event"]
-    state["Update current state"]
-    check{"Evaluate cheaply"}
-    quiet["No agent"]
-    pending["Recheck in 5 minutes<br/>Persisted timer proposed"]
-    due["Due event<br/>Returns through stream"]
-    fresh["Read fresh state<br/>Reconcile gaps first"]
-    status{"Recovered?"}
-    recovered["No further work"]
-    route["Selected evidence<br/>Alert sink or agent"]
-    event --> state
-    state --> check
-    check -->|21.0 to 21.1| quiet
-    check -->|unavailable| pending
-    pending -->|when due| due
-    due --> fresh
-    fresh --> status
-    status -->|yes| recovered
-    status -->|no; normally active| route
-```
-
-*Illustrative behavior. Cheap state updates and selective context are agreed; durable recheck mechanics are proposed. [Editable Mermaid](diagrams/home-assistant-recheck.mmd) · [SVG view](diagrams/home-assistant-recheck.svg).*
-
-A temperature changing from 21.0 to 21.1 updates current state. If no rule considers that change important, processing stops without waking an agent.
-
-A normally active device becoming unavailable can instead schedule a recheck five minutes later. When the timer fires, the recheck returns through the stream and evaluates fresh state. If the device recovered, no agent is needed. If it is still unavailable, policy can route directly to an alert sink or start an agent with selected evidence. If source continuity is unknown, the evaluation should handle that uncertainty rather than treating stale data as proof of an ongoing outage.
-
-Five minutes is illustrative. **Proposed:** persist the reason, event references, due time, and cancellation identity. Recovery can cancel the recheck or make it a no-op; duplicate delivery must not duplicate notifications. Agent follow-ups use the same bounded scheduling model.
-
-## Local admission and ownership
-
-**Agreed:** focus on a local transactional store. A recoverable request/session causal record, pending continuation and outgoing intent must commit before an accepted receipt is returned. A crash before commit admits no work; a retry after commit or receipt loss recovers the same scoped logical operation within its declared retry window. These are per-step transactions, with no LLM or remote effect inside them.
-
-Workers renew authoritative leases. Claims after expiry or explicit release increment a persistent per-session ownership generation, separate from cancellation and context revision; protected commits fence old tokens. Takeover preserves durable pending work for the new owner. The [local reliability design](local-reliability.md) also specifies the accepted dead-letter recovery direction, bounded resource policy and configurable seven-day unused-record retention, while keeping clock/storage details and distributed consensus implementation open.
-
-## Transport and recovery
-
-```mermaid
-flowchart TB
-    accTitle: Brook transport boundary
-    accDescr: Operators use a common topic contract backed by one selected in-memory, local disk, or Kafka implementation. State, timers, and output intents need a separate recovery contract coordinated with consumed positions.
-    runtime["Operator runtime"]
-    topics["Topic contract<br/>Publish · subscribe<br/>Acknowledge · replay"]
-    memory["In-memory<br/>Explicitly ephemeral"]
-    disk["Local on-disk<br/>Proposed default"]
-    kafka["Kafka<br/>Scaling option"]
-    recovery["State and recovery<br/>Coordinate consumed positions"]
-    state["State and history<br/>Ownership + recovery"]
-    effects["Timers + output intents<br/>Cancel + deduplicate"]
-    runtime --> topics
-    topics --> memory
-    topics --> disk
-    topics --> kafka
-    runtime -.->|separate contract| recovery
-    recovery --> state
-    recovery --> effects
-```
-
-*Agreed backend choices; proposed boundaries and default. State placement and crash-recovery coordination, including continuation checkpoints, remain open. [Editable Mermaid](diagrams/transport-boundary.mmd) · [SVG view](diagrams/transport-boundary.svg).*
-
-In-memory transport is useful for tests and explicitly ephemeral use. A local on-disk backend is the proposed starting default for durable single-process use. Kafka is the scaling option. Backend selection should preserve operator interfaces while exposing meaningful differences in durability and deployment.
-
-Kafka moves and retains events; adopting it does not settle ownership of state, sessions, or timers. Distributed operation still needs recovery checkpoints, ownership transfer, and fencing against stale workers.
-
-**Proposed recovery coordination:** processing must coordinate the consumed position, state updates, timer changes, continuation checkpoints, and output intents so a crash cannot silently lose acknowledged work. The local design targets transactional boundaries for these durable steps; the exact storage engine and record protocol remain open. Kafka plus a separate state store requires an explicit outbox, checkpoint, or recovery protocol. The mechanism is open.
-
-External effects need special treatment. Replaying an event must not casually resend a Discord message or repeat an agent tool action. Persisted output intents, stable effect identities, sink-supported idempotency, and an explicit replay mode are candidates. An outbox alone cannot guarantee exactly-once effects at a destination that cannot deduplicate. Brook makes no end-to-end exactly-once promise; [Kafka's delivery documentation](https://kafka.apache.org/41/design/design/) likewise distinguishes Kafka transactions from cooperating external destinations.
-
-## Extension boundaries
-
-Wasm is the preferred direction for portable UDFs that perform classification or transformation. **Proposed:** expose versioned inputs and outputs plus narrowly granted host capabilities. A pure UDF should not need unrestricted network or filesystem access; side effects should pass through explicit runtime interfaces.
-
-[WIT](https://component-model.bytecodealliance.org/design/wit.html) is a candidate for typed component contracts. Execution budgets, memory bounds, payload limits, and cancellation are required design concerns. Wasmtime documents [fuel and interruption](https://docs.wasmtime.dev/examples-interrupting-wasm.html) and [resource limits](https://docs.wasmtime.dev/api/wasmtime/trait.ResourceLimiter.html), which illustrate available mechanisms and their limits. Wasmtime itself has not been selected, and guest memory limits do not bound every host allocation.
-
-**Proposed:** native libraries or service adapters may be a better fit for particular classifiers and models. They should meet the same conceptual operator contract without requiring every model to compile to Wasm. Automatic learning is later work; reliable event, state, and execution foundations come first.
-
-## Prometheus integration
-
-Prometheus integration is a candidate extension. Two proposed adapter roles are:
-
-- **Input:** an Alertmanager webhook can turn existing alerts into Brook events. [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) already groups, deduplicates, routes, silences, and inhibits alerts. Brook should respect that existing alert lifecycle.
-- **Output:** Brook can expose metrics for Prometheus to scrape, including event counts, routing outcomes, lag, agent activations, token use, and errors. This is a metrics endpoint rather than a requirement to push arbitrary events into Prometheus.
-
-**Proposed:** keep metric labels bounded and put individual session and event identifiers in structured diagnostic records instead. This follows [Prometheus instrumentation guidance](https://prometheus.io/docs/practices/instrumentation/) on avoiding excessive cardinality. Metric names, adapters, and recording rules are not specified yet.
-
-## Bounded formal checks
-
-The [TLA+ models](../spec/README.md) explore wait admission, continuation safety, trusted session routing, retained context, authorized delivery, durable admission, local ownership, dead-letter recovery and bounded retention contracts, with reproducible bounded TLC runs and counterexamples for unsafe alternatives. They assume the outstanding-logical-waits interpretation of dependency cycles, which remains open for confirmation. Atomic storage transitions are requirements of the models, not verified implementation mechanisms. These checks do not prove the whole architecture or establish liveness.
+The [formal models and retained results](../spec/README.md) explore bounded safety
+cases and unsafe alternatives. They assume atomic transitions and trusted
+identity/authority inputs; they do not prove the implementation, composition,
+liveness or eventual delivery. The dynamic-wait model explores a candidate
+extension beyond the initial static DAG. Source/compiler tests, crash injection,
+resource accounting and adapter-specific evidence remain necessary.
 
 ## Questions for review
 
-1. What capabilities support the portable pending-receipt/continuation flow, and which harnesses can safely advertise exact suspended-execution resumption?
-2. Should messaging use named output ports or direct destinations? What happens on routing failure, low confidence, or queue saturation?
-3. Can agents share a session? How should replies merge or branch when its context has advanced, and who owns concurrent updates?
-4. What state does Brook own versus fetch from connectors, and how are gaps and stale observations reconciled?
-5. Which local storage engine, transaction boundaries, restart-safe lease clock and resource accounting implement the agreed admission/recovery contract? How should future backends expose weaker or stronger guarantees?
-6. Does circular-dependency rejection cover outstanding waits only, or message-only cycles too? How are concurrent admission, terminal cleanup, and retry identity coordinated?
-
-Resolve these boundaries before choosing crates or promising runtime behavior.
+1. What is the smallest bridge that makes agent work and result delivery use the
+   shared execution model without weakening atomicity, isolation or fencing?
+2. Which typed facade and graph compiler contracts make simple extensions easy
+   while preserving versioned configuration and state compatibility?
+3. How should protected evidence, recent context and extensible retrieval share
+   bounded budgets, and what evidence allows each uncertain sink to recover?
+4. Which dynamic waits/feedback are useful enough to justify expanding the static
+   DAG contract, and what admission rules prevent unbounded work?
+5. What migration, draining and connector activation semantics should the typed
+   control plane expose before adding a web editor or a production agent loop?
