@@ -4,7 +4,7 @@ These TLA+ models make a small part of the [architecture draft](../docs/architec
 
 The wait graph contains outstanding **logical-work waits**, not routing connections or agent identities. This scope is a modelling assumption pending confirmation. Messages may return to an agent without adding a wait; fire-and-forget loops and their budgets are outside the model.
 
-The experimental Rust slice adds a tenth model, [LocalExecution](LOCAL-EXECUTION-RESULTS.md), with nine configurations for send-attempt and logical-job crash boundaries. The complete runner now contains 100 configurations; the original 91-result baseline remains separately documented.
+The experimental Rust slice adds a tenth model, [LocalExecution](LOCAL-EXECUTION-RESULTS.md), with nine configurations for send-attempt and logical-job crash boundaries. The processor slice adds an eleventh model, [ProcessorCommit](PROCESSOR-RESULTS.md), with 13 configurations. The complete runner now contains 113 configurations; earlier 91- and 100-result baselines remain separately documented.
 
 ## Run
 

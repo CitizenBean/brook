@@ -23,7 +23,9 @@ the intended design from the experimental downstream implementation.
 This checkout contains an experimental Rust implementation. There is no stable
 API or production delivery guarantee.
 
-Run the fake-only two-session demo with `cargo run --locked -- demo /tmp/brook-demo-new` using a new directory. See [local core contracts, tests and limitations](docs/local-core.md). Seven-day garbage collection, real providers and arbitrary graph execution remain unimplemented.
+Run the fake-only two-session demo with `cargo run --locked -- demo /tmp/brook-demo-new` using a new directory. See [local core contracts, tests and limitations](docs/local-core.md). Seven-day garbage collection and real providers remain unimplemented.
+
+Try the zero-config terminal recipe with `cargo run --locked -- processor-demo /tmp/brook-processors-new`. The [processor runtime](docs/processors.md) adds durable native processor DAGs, typed Rust adapters, routing operators and an uncertainty-aware terminal sink. [Easy setup, connector management and a live web DAG](docs/control-plane.md) describe the accepted product direction and distinguish implemented foundations from planned work.
 
 [Diagrams](docs/diagrams) pair editable Mermaid sources with SVG views. Keep their
 nodes, edges and labels synchronized. They show intended responsibilities, not

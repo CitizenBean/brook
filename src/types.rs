@@ -245,6 +245,18 @@ pub enum SendOutcome {
 /// Hooks run synchronously; production uses the no-op default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Boundary {
+    ProcessorIngressBeforeCommit,
+    ProcessorIngressAfterCommit,
+    ProcessorBeforeCommit,
+    ProcessorAfterFirstChild,
+    ProcessorAfterCommit,
+    TerminalBeforeCommit,
+    TerminalAfterCommit,
+    TerminalWriteBeforeCommit,
+    TerminalWriteAfterCommit,
+    TerminalWritten,
+    TerminalFinishBeforeCommit,
+    TerminalFinishAfterCommit,
     AdmissionBeforeCommit,
     AdmissionAfterCommit,
     ReplyBeforeCommit,
