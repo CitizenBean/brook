@@ -1,0 +1,27 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Routing
+Linting of module Routing
+Starting... (2026-10-03 22:25:41)
+Warning: The invariant RegistryIsInjective is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+(Use the -nowarning option to disable this warning.)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:25:41.
+Error: Invariant NoIgnoredSpoof is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+
+State 2: <Receive("accountB","chat","A-chat") line 30, col 8 to line 34, col 50 of module Routing>
+/\ spoofIgnored = TRUE
+/\ routed = {"B-chat"}
+
+3 states generated, 3 distinct states found, 1 states left on queue.
+The depth of the complete state graph search is 2.
+Finished in 00s at (2026-10-03 22:25:41)

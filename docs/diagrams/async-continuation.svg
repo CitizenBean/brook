@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="920" viewBox="0 0 540 920" role="img" aria-labelledby="title desc">
+<title id="title">Brook awaited continuation</title>
+<desc id="desc">Awaited work persists origin correlation and causal evidence before dispatch. Reply validation and atomic result delivery lead to fresh context; invalid or duplicate replies never resume work.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#45657d"/></marker></defs>
+<rect width="540" height="920" fill="#ffffff"/>
+<g class="edge" data-source="call" data-target="admit" data-label=""><path d="M270.0 97 C270.0 127.5 270.0 127.5 270.0 158" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="admit" data-target="send" data-label=""><path d="M270.0 232 C270.0 262.5 270.0 262.5 270.0 293" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="send" data-target="reply" data-label="later result"><path d="M270.0 367 C270.0 397.5 270.0 397.5 270.0 428" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="220.0" y="374.5" width="100" height="21" fill="white"/><text x="270.0" y="388.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" fill="#294b62">later result</text>
+</g>
+<g class="edge" data-source="reply" data-target="accept" data-label=""><path d="M270.0 502 C270.0 532.5 270.0 532.5 270.0 563" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="accept" data-target="context" data-label=""><path d="M270.0 637 C270.0 667.5 270.0 667.5 270.0 698" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="context" data-target="run" data-label=""><path d="M270.0 772 C270.0 802.5 270.0 802.5 270.0 833" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="node" data-id="call"><rect x="90" y="25" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="55" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Async tool: await-result</text>
+<text x="270.0" y="77" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Fire-and-forget has no continuation</text>
+</g>
+<g class="node" data-id="admit"><rect x="90" y="160" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="190" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Atomic admission + pending receipt</text>
+<text x="270.0" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Origin + pins + authorized outbox</text>
+</g>
+<g class="node" data-id="send"><rect x="90" y="295" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="325" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Dispatch after commit</text>
+<text x="270.0" y="347" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Preserve logical effect identity</text>
+</g>
+<g class="node" data-id="reply"><rect x="90" y="430" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="460" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Authenticate correlated reply</text>
+<text x="270.0" y="482" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Status / expiry / cancellation</text>
+</g>
+<g class="node" data-id="accept"><rect x="90" y="565" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="595" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Atomic outcome + origin delivery</text>
+<text x="270.0" y="617" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Invalid or duplicate: no resume</text>
+</g>
+<g class="node" data-id="context"><rect x="90" y="700" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="730" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Assemble current bounded context</text>
+<text x="270.0" y="752" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Revision check at admission</text>
+</g>
+<g class="node" data-id="run"><rect x="90" y="835" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="865" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Fresh harness invocation</text>
+<text x="270.0" y="887" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Preserve newer session activity</text>
+</g>
+</svg>

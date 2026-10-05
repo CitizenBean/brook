@@ -1,0 +1,151 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module SessionContext
+Linting of module SessionContext
+Starting... (2026-10-03 22:32:38)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:32:38.
+Progress(9) at 2026-10-03 22:32:41: 468,315 states generated (468,315 s/min), 110,332 distinct states found (110,332 ds/min), 66,557 states left on queue.
+Error: Invariant NoOutOfOrderCompletion is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ contextOK = TRUE
+/\ capturedGen = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ cancelled = {}
+/\ fresh = {}
+/\ runs = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ recoveryOK = TRUE
+/\ compactRecovered = FALSE
+/\ otherCancelResume = FALSE
+/\ requestClosed = {}
+/\ preserved = TRUE
+/\ laterFirst = FALSE
+/\ captured = [a1 |-> {}, a2 |-> {}, b1 |-> {}]
+/\ claims = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ ownershipOK = TRUE
+/\ laterResumedFirst = FALSE
+/\ history = [sA |-> {<<"sA", "base">>}, sB |-> {<<"sB", "base">>}]
+/\ resumeIntents = {}
+/\ generation = [sA |-> 0, sB |-> 0]
+/\ retentionOK = TRUE
+/\ status = [a1 |-> "new", a2 |-> "new", b1 |-> "new"]
+/\ archiveAvailable = [sA |-> TRUE, sB |-> TRUE]
+/\ revision = [sA |-> 0, sB |-> 0]
+/\ cache = [sA |-> "full", sB |-> "full"]
+
+State 2: <Prepare("a1") line 43, col 5 to line 53, col 140 of module SessionContext>
+/\ captured = [a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>}, a2 |-> {}, b1 |-> {}]
+/\ history = [sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>}, sB |-> {<<"sB", "base">>}]
+/\ status = [a1 |-> "pending", a2 |-> "new", b1 |-> "new"]
+/\ revision = [sA |-> 1, sB |-> 0]
+
+State 3: <Prepare("a2") line 43, col 5 to line 53, col 140 of module SessionContext>
+/\ captured = [ a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>},
+  a2 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a2", "call">>},
+  b1 |-> {} ]
+/\ history = [ sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a2", "call">>},
+  sB |-> {<<"sB", "base">>} ]
+/\ status = [a1 |-> "pending", a2 |-> "pending", b1 |-> "new"]
+/\ revision = [sA |-> 2, sB |-> 0]
+
+State 4: <Prepare("b1") line 43, col 5 to line 53, col 140 of module SessionContext>
+/\ captured = [ a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>},
+  a2 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a2", "call">>},
+  b1 |-> {<<"sB", "base">>, <<"sB", "b1", "call">>} ]
+/\ history = [ sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a2", "call">>},
+  sB |-> {<<"sB", "base">>, <<"sB", "b1", "call">>} ]
+/\ status = [a1 |-> "pending", a2 |-> "pending", b1 |-> "pending"]
+/\ revision = [sA |-> 2, sB |-> 1]
+
+State 5: <Accept("a2","sA") line 98, col 8 to line 110, col 130 of module SessionContext>
+/\ laterFirst = TRUE
+/\ claims = [a1 |-> 0, a2 |-> 1, b1 |-> 0]
+/\ history = [ sA |->
+      { <<"sA", "base">>,
+        <<"sA", "a1", "call">>,
+        <<"sA", "a2", "call">>,
+        <<"sA", "a2", "result">> },
+  sB |-> {<<"sB", "base">>, <<"sB", "b1", "call">>} ]
+/\ resumeIntents = {"a2"}
+/\ status = [a1 |-> "pending", a2 |-> "accepted", b1 |-> "pending"]
+/\ revision = [sA |-> 3, sB |-> 1]
+
+State 6: <Accept("a1","sA") line 98, col 8 to line 110, col 130 of module SessionContext>
+/\ claims = [a1 |-> 1, a2 |-> 1, b1 |-> 0]
+/\ history = [ sA |->
+      { <<"sA", "base">>,
+        <<"sA", "a1", "call">>,
+        <<"sA", "a1", "result">>,
+        <<"sA", "a2", "call">>,
+        <<"sA", "a2", "result">> },
+  sB |-> {<<"sB", "base">>, <<"sB", "b1", "call">>} ]
+/\ resumeIntents = {"a1", "a2"}
+/\ status = [a1 |-> "accepted", a2 |-> "accepted", b1 |-> "pending"]
+/\ revision = [sA |-> 4, sB |-> 1]
+
+State 7: <Resume("a2") line 116, col 8 to line 134, col 65 of module SessionContext>
+/\ runs = [a1 |-> 0, a2 |-> 1, b1 |-> 0]
+/\ laterResumedFirst = TRUE
+/\ status = [a1 |-> "accepted", a2 |-> "done", b1 |-> "pending"]
+
+State 8: <Resume("a1") line 116, col 8 to line 134, col 65 of module SessionContext>
+/\ runs = [a1 |-> 1, a2 |-> 1, b1 |-> 0]
+/\ status = [a1 |-> "done", a2 |-> "done", b1 |-> "pending"]
+
+State 9: <Accept("b1","sB") line 98, col 8 to line 110, col 130 of module SessionContext>
+/\ runs = [a1 |-> 1, a2 |-> 1, b1 |-> 0]
+/\ claims = [a1 |-> 1, a2 |-> 1, b1 |-> 1]
+/\ history = [ sA |->
+      { <<"sA", "base">>,
+        <<"sA", "a1", "call">>,
+        <<"sA", "a1", "result">>,
+        <<"sA", "a2", "call">>,
+        <<"sA", "a2", "result">> },
+  sB |-> {<<"sB", "base">>, <<"sB", "b1", "call">>, <<"sB", "b1", "result">>} ]
+/\ resumeIntents = {"a1", "a2", "b1"}
+/\ status = [a1 |-> "done", a2 |-> "done", b1 |-> "accepted"]
+/\ revision = [sA |-> 4, sB |-> 2]
+
+State 10: <Resume("b1") line 116, col 8 to line 134, col 65 of module SessionContext>
+/\ contextOK = TRUE
+/\ capturedGen = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ cancelled = {}
+/\ fresh = {}
+/\ runs = [a1 |-> 1, a2 |-> 1, b1 |-> 1]
+/\ recoveryOK = TRUE
+/\ compactRecovered = FALSE
+/\ otherCancelResume = FALSE
+/\ requestClosed = {}
+/\ preserved = TRUE
+/\ laterFirst = TRUE
+/\ captured = [ a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>},
+  a2 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a2", "call">>},
+  b1 |-> {<<"sB", "base">>, <<"sB", "b1", "call">>} ]
+/\ claims = [a1 |-> 1, a2 |-> 1, b1 |-> 1]
+/\ ownershipOK = TRUE
+/\ laterResumedFirst = TRUE
+/\ history = [ sA |->
+      { <<"sA", "base">>,
+        <<"sA", "a1", "call">>,
+        <<"sA", "a1", "result">>,
+        <<"sA", "a2", "call">>,
+        <<"sA", "a2", "result">> },
+  sB |-> {<<"sB", "base">>, <<"sB", "b1", "call">>, <<"sB", "b1", "result">>} ]
+/\ resumeIntents = {"a1", "a2", "b1"}
+/\ generation = [sA |-> 0, sB |-> 0]
+/\ retentionOK = TRUE
+/\ status = [a1 |-> "done", a2 |-> "done", b1 |-> "done"]
+/\ archiveAvailable = [sA |-> TRUE, sB |-> TRUE]
+/\ revision = [sA |-> 4, sB |-> 2]
+/\ cache = [sA |-> "full", sB |-> "full"]
+
+750788 states generated, 169467 distinct states found, 97693 states left on queue.
+The depth of the complete state graph search is 10.
+Finished in 04s at (2026-10-03 22:32:43)

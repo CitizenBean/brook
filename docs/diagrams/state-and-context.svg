@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="550" viewBox="0 0 900 550" role="img" aria-labelledby="title desc">
+<title id="title">Brook bounded context</title>
+<desc id="desc">Retained history supports protected exact evidence, a recent tail and extensible historical representations or retrieval. Host validation assembles bounded context without requiring all history.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#45657d"/></marker></defs>
+<rect width="900" height="550" fill="#ffffff"/>
+<g class="edge" data-source="history" data-target="exact" data-label=""><path d="M450.0 97 C450.0 130.0 160.0 130.0 160.0 163" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="history" data-target="recent" data-label=""><path d="M450.0 97 C450.0 130.0 450.0 130.0 450.0 163" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="history" data-target="extension" data-label=""><path d="M450.0 97 C450.0 130.0 740.0 130.0 740.0 163" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="exact" data-target="context" data-label=""><path d="M160.0 237 C160.0 275.0 450.0 275.0 450.0 313" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="recent" data-target="context" data-label=""><path d="M450.0 237 C450.0 275.0 450.0 275.0 450.0 313" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="extension" data-target="context" data-label=""><path d="M740.0 237 C740.0 275.0 450.0 275.0 450.0 313" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="context" data-target="run" data-label=""><path d="M450.0 387 C450.0 417.5 450.0 417.5 450.0 448" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="node" data-id="history"><rect x="300" y="25" width="300" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="450.0" y="55" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Retained history + current facts</text>
+<text x="450.0" y="77" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Separate retention policy</text>
+</g>
+<g class="node" data-id="exact"><rect x="20" y="165" width="280" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="160.0" y="195" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Protected exact evidence</text>
+<text x="160.0" y="217" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Call / receipt / outcome</text>
+</g>
+<g class="node" data-id="recent"><rect x="320" y="165" width="260" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="450.0" y="195" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Recent tail</text>
+<text x="450.0" y="217" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Current session activity</text>
+</g>
+<g class="node" data-id="extension"><rect x="600" y="165" width="280" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="740.0" y="195" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Compaction / retrieval</text>
+<text x="740.0" y="217" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Coverage + authorized sources</text>
+</g>
+<g class="node" data-id="context"><rect x="300" y="315" width="300" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="450.0" y="345" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Host-validated bounded context</text>
+<text x="450.0" y="367" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Required evidence must fit</text>
+</g>
+<g class="node" data-id="run"><rect x="300" y="450" width="300" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="450.0" y="480" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Fresh agent invocation</text>
+<text x="450.0" y="502" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Current revision + cancellation</text>
+</g>
+</svg>

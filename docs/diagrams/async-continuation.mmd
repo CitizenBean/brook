@@ -1,0 +1,16 @@
+flowchart TB
+    accTitle: Brook awaited continuation
+    accDescr: Awaited work persists origin correlation and causal evidence before dispatch. Reply validation and atomic result delivery lead to fresh context; invalid or duplicate replies never resume work.
+    call["Async tool: await-result<br/>Fire-and-forget has no continuation"]
+    admit["Atomic admission + pending receipt<br/>Origin + pins + authorized outbox"]
+    send["Dispatch after commit<br/>Preserve logical effect identity"]
+    reply["Authenticate correlated reply<br/>Status / expiry / cancellation"]
+    accept["Atomic outcome + origin delivery<br/>Invalid or duplicate: no resume"]
+    context["Assemble current bounded context<br/>Revision check at admission"]
+    run["Fresh harness invocation<br/>Preserve newer session activity"]
+    call --> admit
+    admit --> send
+    send -->|later result| reply
+    reply --> accept
+    accept --> context
+    context --> run

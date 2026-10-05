@@ -1,0 +1,17 @@
+flowchart TB
+    accTitle: Brook event flow
+    accDescr: One shared execution model carries graph-node deliveries, optional agent work, correlated origin results and authorized sink effects. Logical routing can bypass agents.
+    ingress["Ingress<br/>Producer + durable admission"]
+    processors["Processors / routing Operator<br/>Configured paths and transforms"]
+    agent["Agent node<br/>AgentConfig + swappable harness"]
+    work["Durable asynchronous work<br/>Await-result correlation"]
+    reply["Authenticated reply<br/>Accepted outcome + origin delivery"]
+    resume["Fresh origin invocation<br/>Current context + exact evidence"]
+    sink["Authorized sink intent<br/>Applied / not applied / unknown"]
+    ingress --> processors
+    processors -->|selected path| agent
+    processors -->|direct sink path| sink
+    agent --> work
+    work --> reply
+    reply -->|stored origin binding| resume
+    resume --> sink

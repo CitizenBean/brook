@@ -1,0 +1,16 @@
+flowchart TB
+    accTitle: Brook bounded context
+    accDescr: Retained history supports protected exact evidence, a recent tail and extensible historical representations or retrieval. Host validation assembles bounded context without requiring all history.
+    history["Retained history + current facts<br/>Separate retention policy"]
+    exact["Protected exact evidence<br/>Call / receipt / outcome"]
+    recent["Recent tail<br/>Current session activity"]
+    extension["Compaction / retrieval<br/>Coverage + authorized sources"]
+    context["Host-validated bounded context<br/>Required evidence must fit"]
+    run["Fresh agent invocation<br/>Current revision + cancellation"]
+    history --> exact
+    history --> recent
+    history --> extension
+    exact --> context
+    recent --> context
+    extension --> context
+    context --> run

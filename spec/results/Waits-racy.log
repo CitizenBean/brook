@@ -1,0 +1,82 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Waits
+Linting of module Waits
+Starting... (2026-10-03 22:28:19)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:28:19.
+Error: Invariant NoWaitCycle is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ checked = {}
+/\ identity = ( <<a, a>> :> <<a, a>> @@
+  <<a, b>> :> <<a, b>> @@
+  <<a, c>> :> <<a, c>> @@
+  <<b, a>> :> <<b, a>> @@
+  <<b, b>> :> <<b, b>> @@
+  <<b, c>> :> <<b, c>> @@
+  <<c, a>> :> <<c, a>> @@
+  <<c, b>> :> <<c, b>> @@
+  <<c, c>> :> <<c, c>> )
+/\ attempts = ( <<a, a>> :> 0 @@
+  <<a, b>> :> 0 @@
+  <<a, c>> :> 0 @@
+  <<b, a>> :> 0 @@
+  <<b, b>> :> 0 @@
+  <<b, c>> :> 0 @@
+  <<c, a>> :> 0 @@
+  <<c, b>> :> 0 @@
+  <<c, c>> :> 0 )
+/\ edges = {}
+
+State 2: <Check(<<a, b>>) line 17, col 13 to line 20, col 54 of module Waits>
+/\ checked = {<<a, b>>}
+
+State 3: <Check(<<b, a>>) line 17, col 13 to line 20, col 54 of module Waits>
+/\ checked = {<<a, b>>, <<b, a>>}
+
+State 4: <Commit(<<a, b>>) line 21, col 14 to line 26, col 34 of module Waits>
+/\ checked = {<<b, a>>}
+/\ attempts = ( <<a, a>> :> 0 @@
+  <<a, b>> :> 1 @@
+  <<a, c>> :> 0 @@
+  <<b, a>> :> 0 @@
+  <<b, b>> :> 0 @@
+  <<b, c>> :> 0 @@
+  <<c, a>> :> 0 @@
+  <<c, b>> :> 0 @@
+  <<c, c>> :> 0 )
+/\ edges = {<<a, b>>}
+
+State 5: <Commit(<<b, a>>) line 21, col 14 to line 26, col 34 of module Waits>
+/\ checked = {}
+/\ identity = ( <<a, a>> :> <<a, a>> @@
+  <<a, b>> :> <<a, b>> @@
+  <<a, c>> :> <<a, c>> @@
+  <<b, a>> :> <<b, a>> @@
+  <<b, b>> :> <<b, b>> @@
+  <<b, c>> :> <<b, c>> @@
+  <<c, a>> :> <<c, a>> @@
+  <<c, b>> :> <<c, b>> @@
+  <<c, c>> :> <<c, c>> )
+/\ attempts = ( <<a, a>> :> 0 @@
+  <<a, b>> :> 1 @@
+  <<a, c>> :> 0 @@
+  <<b, a>> :> 1 @@
+  <<b, b>> :> 0 @@
+  <<b, c>> :> 0 @@
+  <<c, a>> :> 0 @@
+  <<c, b>> :> 0 @@
+  <<c, c>> :> 0 )
+/\ edges = {<<a, b>>, <<b, a>>}
+
+291 states generated, 130 distinct states found, 89 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-03 22:28:19)

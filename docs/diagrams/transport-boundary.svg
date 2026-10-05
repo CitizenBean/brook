@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="650" viewBox="0 0 560 650" role="img" aria-labelledby="title desc">
+<title id="title">Brook transport and execution authority</title>
+<desc id="desc">Transport adapters expose their durability capabilities. One local execution authority coordinates admission, work state, outbox and recovery; generic sinks report external effect outcomes.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#45657d"/></marker></defs>
+<rect width="560" height="650" fill="#ffffff"/>
+<g class="edge" data-source="backend" data-target="ingress" data-label=""><path d="M270.0 97 C270.0 127.5 270.0 127.5 270.0 158" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="ingress" data-target="authority" data-label=""><path d="M270.0 232 C270.0 262.5 270.0 262.5 270.0 293" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="authority" data-target="delivery" data-label=""><path d="M270.0 367 C270.0 397.5 270.0 397.5 270.0 428" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<g class="edge" data-source="delivery" data-target="sink" data-label="authorized effect admission"><path d="M270.0 502 C270.0 532.5 270.0 532.5 270.0 563" fill="none" stroke="#45657d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="167.5" y="509.5" width="205" height="21" fill="white"/><text x="270.0" y="523.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" fill="#294b62">authorized effect admission</text>
+</g>
+<g class="node" data-id="backend"><rect x="90" y="25" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="55" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Transport adapters</text>
+<text x="270.0" y="77" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Ephemeral / local disk / future Kafka</text>
+</g>
+<g class="node" data-id="ingress"><rect x="90" y="160" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="190" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Generic producer boundary</text>
+<text x="270.0" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Identity + admission acknowledgement</text>
+</g>
+<g class="node" data-id="authority"><rect x="90" y="295" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="325" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Shared local execution authority</text>
+<text x="270.0" y="347" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Dedup / leases / state / outbox / quotas</text>
+</g>
+<g class="node" data-id="delivery"><rect x="90" y="430" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="460" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Graph-node and result deliveries</text>
+<text x="270.0" y="482" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Agent work + correlation records</text>
+</g>
+<g class="node" data-id="sink"><rect x="90" y="565" width="360" height="72" rx="10" fill="#edf4f8" stroke="#45657d" stroke-width="1.5"/>
+<text x="270.0" y="595" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Generic sink boundary</text>
+<text x="270.0" y="617" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#18354a">Evidence + uncertain-effect recovery</text>
+</g>
+</svg>

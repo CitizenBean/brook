@@ -1,0 +1,116 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Ownership
+Linting of module Ownership
+Starting... (2026-10-04 00:07:57)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-04 00:07:57.
+Error: Invariant NoHeartbeatExtension is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ claimOK = TRUE
+/\ state = [ sA |->
+      [ owner |-> "none",
+        generation |-> 0,
+        serial |-> 0,
+        expiry |-> 0,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ],
+  sB |->
+      [ owner |-> "none",
+        generation |-> 0,
+        serial |-> 0,
+        expiry |-> 0,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ] ]
+/\ now = 0
+/\ commitOK = TRUE
+/\ transferred = {}
+/\ renewed = FALSE
+/\ transferResumed = FALSE
+/\ heartbeatOK = TRUE
+/\ preflight = {}
+/\ localityOK = TRUE
+/\ issued = {}
+/\ reacquired = FALSE
+
+State 2: <Claim("sA","w1") line 59, col 16 to line 59, col 72 of module Ownership>
+/\ state = [ sA |->
+      [ owner |-> "w1",
+        generation |-> 1,
+        serial |-> 1,
+        expiry |-> 2,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ],
+  sB |->
+      [ owner |-> "none",
+        generation |-> 0,
+        serial |-> 0,
+        expiry |-> 0,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ] ]
+/\ issued = {<<"sA", "w1", 1, 1>>}
+
+State 3: <Tick line 94, col 9 to line 96, col 76 of module Ownership>
+/\ state = [ sA |->
+      [ owner |-> "w1",
+        generation |-> 1,
+        serial |-> 1,
+        expiry |-> 2,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ],
+  sB |->
+      [ owner |-> "none",
+        generation |-> 0,
+        serial |-> 0,
+        expiry |-> 0,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ] ]
+/\ now = 1
+/\ issued = {<<"sA", "w1", 1, 1>>}
+
+State 4: <Next line 99, col 10 to line 99, col 88 of module Ownership>
+/\ claimOK = TRUE
+/\ state = [ sA |->
+      [ owner |-> "w1",
+        generation |-> 1,
+        serial |-> 1,
+        expiry |-> 3,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ],
+  sB |->
+      [ owner |-> "none",
+        generation |-> 0,
+        serial |-> 0,
+        expiry |-> 0,
+        cancelGeneration |-> 0,
+        pending |-> TRUE,
+        done |-> FALSE ] ]
+/\ now = 1
+/\ commitOK = TRUE
+/\ transferred = {}
+/\ renewed = TRUE
+/\ transferResumed = FALSE
+/\ heartbeatOK = TRUE
+/\ preflight = {}
+/\ localityOK = TRUE
+/\ issued = {<<"sA", "w1", 1, 1>>}
+/\ reacquired = FALSE
+
+106 states generated, 52 distinct states found, 39 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-10-04 00:07:57)

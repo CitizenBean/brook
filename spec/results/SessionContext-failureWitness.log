@@ -1,0 +1,93 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module SessionContext
+Linting of module SessionContext
+Starting... (2026-10-03 22:32:43)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-03 22:32:43.
+Error: Invariant NoRecoveryFailure is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ contextOK = TRUE
+/\ capturedGen = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ cancelled = {}
+/\ fresh = {}
+/\ runs = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ recoveryOK = TRUE
+/\ compactRecovered = FALSE
+/\ otherCancelResume = FALSE
+/\ requestClosed = {}
+/\ preserved = TRUE
+/\ laterFirst = FALSE
+/\ captured = [a1 |-> {}, a2 |-> {}, b1 |-> {}]
+/\ claims = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ ownershipOK = TRUE
+/\ laterResumedFirst = FALSE
+/\ history = [sA |-> {<<"sA", "base">>}, sB |-> {<<"sB", "base">>}]
+/\ resumeIntents = {}
+/\ generation = [sA |-> 0, sB |-> 0]
+/\ retentionOK = TRUE
+/\ status = [a1 |-> "new", a2 |-> "new", b1 |-> "new"]
+/\ archiveAvailable = [sA |-> TRUE, sB |-> TRUE]
+/\ revision = [sA |-> 0, sB |-> 0]
+/\ cache = [sA |-> "full", sB |-> "full"]
+
+State 2: <Prepare("a1") line 43, col 5 to line 53, col 140 of module SessionContext>
+/\ captured = [a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>}, a2 |-> {}, b1 |-> {}]
+/\ history = [sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>}, sB |-> {<<"sB", "base">>}]
+/\ status = [a1 |-> "pending", a2 |-> "new", b1 |-> "new"]
+/\ revision = [sA |-> 1, sB |-> 0]
+
+State 3: <Accept("a1","sA") line 98, col 8 to line 110, col 130 of module SessionContext>
+/\ claims = [a1 |-> 1, a2 |-> 0, b1 |-> 0]
+/\ history = [ sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a1", "result">>},
+  sB |-> {<<"sB", "base">>} ]
+/\ resumeIntents = {"a1"}
+/\ status = [a1 |-> "accepted", a2 |-> "new", b1 |-> "new"]
+/\ revision = [sA |-> 2, sB |-> 0]
+
+State 4: <LoseArchive("sA") line 90, col 5 to line 94, col 166 of module SessionContext>
+/\ claims = [a1 |-> 1, a2 |-> 0, b1 |-> 0]
+/\ history = [ sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a1", "result">>},
+  sB |-> {<<"sB", "base">>} ]
+/\ resumeIntents = {"a1"}
+/\ status = [a1 |-> "accepted", a2 |-> "new", b1 |-> "new"]
+/\ archiveAvailable = [sA |-> FALSE, sB |-> TRUE]
+/\ revision = [sA |-> 2, sB |-> 0]
+
+State 5: <RecoveryFailed("a1") line 136, col 5 to line 141, col 127 of module SessionContext>
+/\ contextOK = TRUE
+/\ capturedGen = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ cancelled = {}
+/\ fresh = {}
+/\ runs = [a1 |-> 0, a2 |-> 0, b1 |-> 0]
+/\ recoveryOK = TRUE
+/\ compactRecovered = FALSE
+/\ otherCancelResume = FALSE
+/\ requestClosed = {}
+/\ preserved = TRUE
+/\ laterFirst = FALSE
+/\ captured = [a1 |-> {<<"sA", "base">>, <<"sA", "a1", "call">>}, a2 |-> {}, b1 |-> {}]
+/\ claims = [a1 |-> 1, a2 |-> 0, b1 |-> 0]
+/\ ownershipOK = TRUE
+/\ laterResumedFirst = FALSE
+/\ history = [ sA |-> {<<"sA", "base">>, <<"sA", "a1", "call">>, <<"sA", "a1", "result">>},
+  sB |-> {<<"sB", "base">>} ]
+/\ resumeIntents = {"a1"}
+/\ generation = [sA |-> 0, sB |-> 0]
+/\ retentionOK = TRUE
+/\ status = [a1 |-> "recoveryFailed", a2 |-> "new", b1 |-> "new"]
+/\ archiveAvailable = [sA |-> FALSE, sB |-> TRUE]
+/\ revision = [sA |-> 2, sB |-> 0]
+/\ cache = [sA |-> "full", sB |-> "full"]
+
+1341 states generated, 551 distinct states found, 444 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-03 22:32:43)
