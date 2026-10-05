@@ -1,0 +1,71 @@
+TLC2 Version 2026.10.03.231403 (rev: 1813307)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 16 cores with 981MB heap and 64MB offheap memory (Mac OS X 27.0 aarch64, Homebrew 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Parsing standard or local module
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module LocalExecution
+Linting of module LocalExecution
+Starting... (2026-10-04 01:23:05)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-04 01:23:05.
+Error: Invariant DoneHasResult is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ result = FALSE
+/\ invoked = FALSE
+/\ epoch = 1
+/\ commitOK = TRUE
+/\ sends = 0
+/\ crashes = 0
+/\ completions = 0
+/\ attempts = 0
+/\ send = "ready"
+/\ up = TRUE
+/\ accepted = FALSE
+/\ materialized = FALSE
+/\ externalCount = 0
+/\ pins = TRUE
+/\ job = "none"
+/\ issued = {}
+/\ intent = FALSE
+
+State 2: <AdmitSend line 19, col 5 to line 22, col 83 of module LocalExecution>
+/\ sends = 1
+/\ send = "inFlight"
+
+State 3: <ProviderApply line 24, col 5 to line 27, col 83 of module LocalExecution>
+/\ invoked = TRUE
+/\ externalCount = 1
+
+State 4: <AcceptReply line 35, col 5 to line 38, col 83 of module LocalExecution>
+/\ invoked = TRUE
+/\ accepted = TRUE
+/\ externalCount = 1
+/\ intent = TRUE
+
+State 5: <Materialize line 40, col 5 to line 45, col 76 of module LocalExecution>
+/\ result = FALSE
+/\ invoked = TRUE
+/\ epoch = 1
+/\ commitOK = TRUE
+/\ sends = 1
+/\ crashes = 0
+/\ completions = 0
+/\ attempts = 0
+/\ send = "inFlight"
+/\ up = TRUE
+/\ accepted = TRUE
+/\ materialized = TRUE
+/\ externalCount = 1
+/\ pins = TRUE
+/\ job = "done"
+/\ issued = {}
+/\ intent = TRUE
+
+16 states generated, 15 distinct states found, 6 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-04 01:23:05)

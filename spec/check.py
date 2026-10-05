@@ -9,6 +9,15 @@ import subprocess
 import tempfile
 
 CASES = {
+    "LocalExecution": None,
+    "LocalExecution-terminalUnpin": "LiveDependenciesPinned",
+    "LocalExecution-blindResend": "NoBlindResend",
+    "LocalExecution-volatileJob": "DurableJob",
+    "LocalExecution-splitReply": "AtomicReply",
+    "LocalExecution-earlyDone": "DoneHasResult",
+    "LocalExecution-earlyUnpin": "LiveJobPinned",
+    "LocalExecution-repeatCommit": "CompletionOnce",
+    "LocalExecution-staleAttempt": "FencedAttempt",
     "Retention": None,
     "Retention-overDisk": "BoundedDisk",
     "Retention-overRam": "BoundedRam",

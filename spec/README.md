@@ -4,6 +4,8 @@ These TLA+ models make a small part of the [architecture draft](../docs/architec
 
 The wait graph contains outstanding **logical-work waits**, not routing connections or agent identities. This scope is a modelling assumption pending confirmation. Messages may return to an agent without adding a wait; fire-and-forget loops and their budgets are outside the model.
 
+The experimental Rust slice adds a tenth model, [LocalExecution](LOCAL-EXECUTION-RESULTS.md), with nine configurations for send-attempt and logical-job crash boundaries. The complete runner now contains 100 configurations; the original 91-result baseline remains separately documented.
+
 ## Run
 
 Install Java and Python 3 through your normal tooling. Download the official tools locally; nothing here needs a global installation or credentials:
