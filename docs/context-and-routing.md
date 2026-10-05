@@ -1,126 +1,161 @@
-# Sessions, asynchronous context and authorized delivery
+# Sessions, context and authorized delivery
 
-This document proposes concrete contracts for the [architecture draft](architecture.md). It is a design for review, not implemented behavior.
+These contracts refine the [architecture](architecture.md). An agent is a graph
+node; awaited work and its origin-result delivery use the same durable execution
+model as other graph work. See [status and limits](architecture.md#status-and-limits)
+for implementation coverage and [local reliability](local-reliability.md) for
+admission, ownership, recovery and retention.
 
-**Requirements:** route a message to the correct session; retain the context needed by asynchronous work; allow newer activity and multiple pending requests; preserve newer activity on return; and deliver outgoing messages only to their authorized sinks and recipients. A user may explicitly request another channel, such as asking an agent in a chat conversation to email someone. Correct routing must support that request.
-
-**Proposed mechanics:** the identities, records, portable receipt/event protocol, retention policy and authorization boundaries below. The [bounded TLA+ checks](../spec/README.md) test small abstractions of these mechanics. They do not establish a complete security or implementation proof.
-
-**Agreed local reliability boundary:** accepted work is committed recoverably before its pending receipt is returned. A local transactional store is the initial target, with leased worker ownership, dead-letter recovery and configurable seven-day retention for unused records. The [local reliability design](local-reliability.md) records these decisions, their proposed mechanisms and checked limits.
-
-## Resolve the session from trusted ingress
-
-Use this external lookup key:
+## Resolve sessions from trusted ingress
 
 ```text
-(authenticated namespace, trusted adapter client, external conversation ID)
-    -> stable internal session ID
+(authenticated namespace, trusted client, external conversation ID)
+    → stable internal session ID
 ```
 
-The namespace is an authenticated account/workspace boundary. The client identifies the configured adapter/client instance within that boundary; it is not an arbitrary payload field or an agent definition. The external ID identifies a conversation according to that adapter's contract. The same external ID in two clients or two namespaces is not the same session.
+The namespace is an authenticated account/workspace boundary. The client is a
+configured producer/sink adapter, not an arbitrary payload field or an agent
+configuration. Identical external conversation IDs in different clients or
+namespaces identify different sessions.
 
-The trusted adapter obtains the namespace and client from its authenticated connection/configuration, then validates the external conversation ID against that connection's authority. An external ID can originate in a provider event, but its presence is not proof that the sender is authorized to use it. A payload's claimed namespace, client, internal session or output route cannot override the resolved destination. Unknown, ambiguous or unauthorized mappings fail explicitly. Automatic creation, when enabled, must create the mapping within the authorized namespace using a race-safe uniqueness constraint.
+The trusted adapter validates the external ID against its connection's authority.
+Claimed namespace, session or route fields in event data cannot override that
+resolution. Unknown, ambiguous or unauthorized mappings fail explicitly.
+Automatic creation uses a scoped uniqueness constraint; reconnects reuse the
+existing mapping. Do not reuse an internal session ID for another conversation.
+Aliases, merges and cross-namespace access require separate authorization.
 
-Treat the internal ID as an opaque stable identifier. Do not reuse it for a different conversation. Deliberate aliases or session merging require a separate authorized operation and are not part of this proposal or model. A client reconnect should resolve to the existing mapping rather than creating a new session accidentally.
+`AgentConfig` describes an agent's behavior and capabilities; the harness executes
+it, and the session owns durable conversational activity. A session does not grant
+access to every sink or recipient associated with its principal.
 
-The session determines history/context ownership and the acting principal. It does **not** grant unlimited access to every sink, recipient or conversation associated with that principal.
+## Bind work and returns before dispatch
 
-## Separate the source session, work destination and return
+An agent-to-agent request has three independent references:
 
-An agent-to-agent request has three distinct references:
-
-| Reference | Meaning |
+| Reference | Responsibility |
 | --- | --- |
-| Source session | Owns the request, original causal context and eventual continuation event |
-| Destination | Agent/service plus an explicitly selected, authorized destination session or isolated work scope |
-| Reply binding | Durable request/continuation identity and expected responder; resolves the return to the source session |
+| Source session | Owns the request, causal evidence and eventual continuation |
+| Destination | Authorized agent/service and destination session or isolated work scope |
+| Return binding | Request correlation and expected responder; resolves to the origin |
 
-A request to another agent does not make that agent's session the reply's source conversation. Nor does an agent name or client ID identify a session by itself. Cross-namespace work requires an explicit capability; default routing cannot infer that permission.
+A receiving agent's session cannot replace the source conversation. A request ID
+is a correlation reference, not bearer authority.
 
-Before dispatch, persist an immutable request record with at least:
+Admission atomically persists immutable arguments, logical request/effect IDs,
+source and destination bindings, expected responder/reply schema, expiry,
+cancellation generation, context revision, causal pins and outgoing intent.
+Capture code/config/schema versions and bounded attempt metadata. Retries retain
+logical identity and immutable bindings; different arguments under the same
+operation key conflict.
 
-- Request, logical effect and continuation IDs; originating logical call/event ID.
-- Source internal session and namespace; source principal/authorization reference.
-- Destination work address and expected responder identity/capability.
-- Correlation token, expected reply schema and expiry/closure state.
-- Captured session cancellation generation and context revision, as separate values.
-- Causal history/checkpoint references, their format/harness metadata and retention pin.
-- Outgoing intent reference and bounded attempt metadata.
-
-These are conceptual fields, not final Rust types. Retries use the same logical request/effect and bindings. Attempt IDs are not new authority or new work identities.
-
-An incoming reply is an authenticated response to a known request. Resolve the owning source session from that durable request. Check the responder binding, correlation/schema, request status, expiry and current source-session cancellation generation. Do not trust a reply's claimed receiving session, namespace or client; do not fall back to whichever session happens to be running. Request IDs are correlation references, not bearer authorization by themselves.
+Logical branch selection chooses a configured path, not a recipient grant. A
+transform can be inserted on that path without changing the router. Versioned
+configuration pins in-flight work so an edit cannot silently redirect it.
 
 ## Portable asynchronous execution
 
-The proposed portable default avoids leaving an open provider-specific tool call indefinitely:
+![Durable work and correlated origin return](diagrams/async-continuation.svg)
 
-1. The harness calls Brook's asynchronous dispatch tool. Brook admits dependencies and commits the recoverable request/session causal references, pending continuation and authorized outbox intent before returning a **pending receipt** containing the request ID. A lost receipt is recovered by retrying the same scoped operation identity within its declared retry window; a mismatched submission is rejected. This completes that provider tool invocation; the receipt is its immediate result.
-2. The session's run may finish or continue. A waiting request does not hold the active-run slot. New user messages and other work can update the same session, and several requests can remain pending.
-3. A valid later reply atomically claims the pending request, appends a correlated continuation outcome to the source session's durable history, and records a resume intent. The outcome refers to the originating logical call and request; it is not spliced into an old provider transcript as that call's delayed provider result.
-4. The scheduler claims a logical resume, checks cancellation again, and builds a fresh bounded context using current session history/projection plus retained request-specific causal material. It can start a new run through any harness that supports this portable contract.
+[Editable continuation flow](diagrams/async-continuation.mmd).
 
-A harness may advertise a stronger suspended-tool or exact-execution resume capability. Use it only with an explicit supported protocol that preserves that harness's transcript rules and session concurrency guarantees. Portable reconstruction does not promise serialization of arbitrary runtime internals or continuity of the same execution.
+1. An async tool declares fire-and-forget or await-result. Brook commits the work
+   and authorized outbox intent before returning a pending receipt. Await-result
+   also records origin correlation and required causal evidence. This receipt
+   completes the immediate provider tool invocation; it is not the work's outcome.
+2. The current run can continue or end. Waiting work releases the active-run slot;
+   ordinary messages and other requests can advance the session. One active
+   agent invocation per session is the proposed initial scheduling policy;
+   pending work remains bounded.
+3. A later reply is authenticated against the stored expected responder. Check
+   correlation, schema, expiry, pending status and cancellation. Atomically record
+   the accepted outcome and origin delivery. Duplicate replies cannot create a
+   second logical continuation; late replies cannot reopen closed work.
+4. The scheduler assembles fresh bounded context and admits the origin invocation
+   with revision/cancellation checks. The original logical call, pending receipt
+   and eventual outcome remain associated without inserting a stale provider
+   result into an advanced transcript.
 
-One active run per session with a mailbox remains the proposed initial scheduling policy. History can advance while work is waiting. Acceptance order need not equal issue order: request B can complete and resume before request A. Every outcome remains attached to its own request. A reply for A does not restore the session to the revision at which A was issued.
+Replies may arrive out of order. A newer revision alone does not invalidate a
+reply; it requires the resumed invocation to use current context. An awaited
+return is a separate invocation through its durable binding, not an arbitrary
+DAG back-edge. Dynamic agent wait chains need the additional admission rules
+identified in the architecture.
 
-Request-specific cancellation/timeout closes that request without changing the whole session's generation. A session reset/cancellation increments only that session's generation and invalidates its older pending continuations. Ordinary messages, context compaction and revision changes do not increment cancellation generation. Check generation at both reply acceptance and logical resume admission. Cancellation after an admitted run or external send cannot undo what already happened.
+Any harness supporting this portable contract can start the fresh run. Exact
+suspended-execution resume is an optional advertised capability with separate
+transcript/version/concurrency requirements. Brook does not require serialized
+provider internals or select a production agent loop.
 
-## Durable history and bounded context
+Request cancellation/expiry closes only that request. A session reset increments
+that session's cancellation generation, invalidating its older continuations.
+Ordinary messages and compaction do not increment it. Check cancellation at reply
+acceptance and invocation admission; invocation cancellation also fences its later
+commits. Pipeline drain stops new ingress while admitted work settles. Neither
+operation retracts admitted external effects.
 
-Keep three related records distinct:
+## Assemble bounded context from protected evidence
 
 | Record | Role |
 | --- | --- |
-| Session history | Append-only, session-owned event records with stable event identity and revision/order metadata; immutable while retained |
-| Current projection | Disposable bounded summary plus recent/relevant tail, recording the history range/references it covers |
-| Request checkpoint | Portable retained references to the originating instruction, logical call/receipt, relevant causal material and reconstruction metadata |
+| Session history | Ordered, session-owned events with stable identities; immutable while retained |
+| Historical representation | Replaceable text or structured projection with format, source coverage and provenance |
+| Request checkpoint | Portable references to required instruction, logical call/receipt and causal material |
 
-A history revision advances only for its session's new durable activity. Compaction changes the view, not old event identities or cancellation generation. A summary is lossy; its coverage metadata is not a substitute for exact material a continuation requires.
+Context is a selection, not the entire historical transcript. At request creation,
+pin exact evidence required to interpret its return. Protection continues through
+accepted outcomes, pending execution and unresolved recovery, not just while a
+reply is pending. Storage tier changes must preserve recoverability. Release pins
+only when all dependent obligations settle.
 
-At request creation, select and pin the material necessary for later interpretation of that request. Pinning must cover both pending replies and accepted outcomes awaiting materialization. A pinned record may be moved to another durable tier, but its referenced contents must remain recoverable. A retention collector must not discard it merely because the current projection no longer displays the original call. After terminal completion/cancellation, release the continuation's pin according to a defined retention policy; ordinary history retention is still independent.
+At resume, load the accepted outcome and immutable request, then verify protected
+source identities and versions. Read the current session revision and construct a
+causal block containing instruction, call, receipt and outcome. Combine it with a
+bounded recent tail, relevant current facts and optional historical representations
+or retrieved evidence. Record the manifest's included/covered references,
+provenance and revision before admission.
 
-At resume:
+Compactors may emit prose or structured data; their output is historical evidence,
+not instructions or authorization. Retrievers select references within authorized
+scopes. Session-history references must belong to the same session; external-corpus
+RAG requires separate access and source-provenance checks. The host verifies raw
+references and enforces budgets regardless of extension output.
 
-1. Load the accepted outcome and immutable request record from the source session.
-2. Resolve the pinned causal references and validate their identity/version. Rebuild a missing projection from available durable history; never invent missing source material from a summary or model memory.
-3. Read the current source-session revision. Select current relevant history and construct a request-scoped causal block containing the original instruction/call reference, pending receipt, and correlated outcome. Keep newer session activity intact.
-4. Build a bounded prompt using that projection and causal block. Record included/covered references and the revision used. If the required block cannot fit, retrieve, compact safely, branch explicitly or fail according to a declared policy; silently truncating necessary causal material is not a valid fallback.
-5. Admit the logical resume with a version/cancellation check. If the source history advanced during construction, rebuild or apply a deliberate merge/branch policy. Do not overwrite live history or the current projection with an old snapshot.
+Lossy summaries cannot replace protected exact evidence. If required evidence is
+missing, corrupt, unsupported or too large, fail explicitly or use an explicitly
+authorized alternative with its own contract. Never silently truncate it or invent
+it from model memory. Optional context can be compacted or omitted within policy.
+If history advances during assembly, rebuild before admission; do not overwrite
+newer history with an old snapshot.
 
-If retained material is missing, corrupt, expired contrary to the pin contract or unsupported by the chosen adapter, record an explicit `recovery_failed` outcome with the request/reason. Do not mark the logical continuation as successfully resumed. Retry, user escalation and manual recovery policy remain open. No eventual recovery is promised by the model.
+Compaction changes representation, not history identity or cancellation. Collection
+is separate: a seven-day unused-record default cannot delete a live reference.
+Rebuilding a projection can use retained available history; it never assumes that
+all old history still exists. Missing required sources produce recovery failure,
+not a successful resume.
 
-In portable mode the originating call and eventual outcome form a **logical causal association**. The original provider tool-call/result pair is the dispatch call plus its pending receipt. The later continuation event is formatted as fresh input for the new run. Provider-specific pairing, role ordering and schema validation belong to the harness adapter; matching request IDs alone does not establish provider transcript validity.
+## Authorize each outgoing intent
 
-## Authorize each outgoing message, then preserve its destination
+The origin has a default reply route, but each message has its own permission.
+A user can authorize an email from a chat session while a separate acknowledgement
+goes back to chat. Resolve the intended account, recipient, action and data scope
+from authenticated instructions and policy; ask when that authority is ambiguous.
+A model suggestion, display name or raw address is not a grant.
 
-A session has a default reply route, but an outgoing message has its own authorized destination. For example, a user in Discord may request “email this to my colleague.” Resolve which sending account and recipient are authorized, using the user instruction and policy; ask for missing or ambiguous recipient authority when necessary. That email intent can coexist with a separate Discord acknowledgement from the same session. Do not require every effect to return to the originating channel.
+Persist the intent's logical effect identity, source principal/session, grant
+reference, resolved sink/provider, sending account, recipient/thread, data scope,
+binding version and expiry. Routers, transforms, replies and retries cannot
+silently substitute another recipient, account or scope. A changed destination
+requires a new authorized intent; a retry preserves the original effect key.
 
-**Proposed outgoing intent binding:**
+At effect admission, atomically validate the current grant and pinned binding.
+Missing, revoked, expired, mismatched or recycled bindings fail closed, with no
+fallback to another channel. Prevent identity/version reuse that could make a
+stale binding appear valid again. An earlier preflight is insufficient.
 
-```text
-logical effect ID + source session/principal + authorization/grant reference
-+ resolved sink/provider + sending account + recipient/thread
-+ relevant content/data scope + binding version/generation + expiry
-```
-
-The exact fields depend on the sink. A display name, raw route ID or model-generated email address is not an authorization grant. Policy decides whether the user instruction authorizes the specific recipient, account, action and data. An agent-generated suggestion and an authenticated user's instruction are different evidence.
-
-Once authorized, persist that resolved binding with the outbox intent. Operators, replies, resumed runs and retries may carry the intent but cannot silently change its destination, account, scope or authority. Sending to a different destination requires a new separately authorized intent. A retry preserves the existing effect ID and bound destination.
-
-Before admitting delivery, the trusted sink dispatcher verifies that the intent's authorization is still valid and that its binding/version matches the authorized record. Missing, revoked, expired, mismatched or recycled bindings fail closed; there is no fallback to another recipient, account or channel. Do not resolve an old route ID afresh to a newly assigned recipient. Binding generations must not have an ABA reuse within their identity lifetime.
-
-A preflight check is insufficient if revocation or route reassignment can occur before admission. The model treats validation plus **delivery admission** as one linearization point. A real dispatcher must implement an equivalent fenced/transactional contract with its authorization state. This is not a claim that a database check and irreversible provider send can be globally atomic. After admission, an in-flight provider request may still complete even if permission is revoked. Stronger immediate revocation requires provider-side fencing/cooperation and is not promised here.
-
-The delivery safety claim is: every admitted effect uses the destination authorized for that specific intent, with authority valid at admission. Later revocation does not retroactively invalidate that history. This does not promise eventual delivery, exactly-once provider effects, correctness of provider recipient resolution, or confidentiality of message content merely because the destination is correct. Trusted adapters, authorization policy and provider/account mappings remain part of the security boundary.
-
-## Open implementation decisions
-
-- Namespace/principal representation, authentication adapters, mapping creation, migration and deliberate aliases.
-- Concrete capability/grant evaluation, recipient resolution, sink account ownership, expiry and revocation propagation.
-- Concrete local storage engine/transactions, restart-safe clock basis, active-run scheduling and implementation of the agreed admission and ownership boundaries.
-- Causal selection, pin size/expiry, retention quotas, summary quality, context budgets and missing-material escalation.
-- Shared versus isolated agent destination sessions; permitted cross-namespace work.
-- Harness capability negotiation and provider-specific receipt/continuation formatting.
-
-The models check bounded examples of the proposed invariants and expose several unsafe alternatives. They assume trusted metadata and atomic abstract actions; they neither implement these boundaries nor prove that the independent models compose into a secure deployed system.
+The safety boundary is authority valid at admission for that exact intent. A
+provider operation already admitted may finish after revocation or lease expiry;
+stronger revocation requires provider cooperation. Database admission and remote
+I/O are not globally atomic. Correct destination routing does not establish
+provider exactly-once delivery or content confidentiality. Preserve unknown
+outcomes for [evidence-based recovery](local-reliability.md#recover-uncertain-effects).

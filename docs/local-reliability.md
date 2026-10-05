@@ -1,90 +1,162 @@
-# Local admission, ownership, recovery and retention
+# Local durability, ownership and recovery
 
-This extends the [session and routing design](context-and-routing.md). It records agreed behavior and proposed mechanisms for a documentation-only platform. No storage engine or runtime implementation has been selected.
+All graph deliveries, agent invocations, awaited work and result returns share
+these contracts. Start with a local transactional authority; remote effects run
+outside its transactions. The [architecture status](architecture.md#status-and-limits)
+describes implementation gaps. [Session and routing rules](context-and-routing.md)
+define trusted identities and per-intent authority.
 
-## Agreed direction
+## Atomic admission and deduplication
 
-- Focus the first durable design on a **local transactional store**. Admission is recoverable before Brook acknowledges accepted work.
-- A worker has a stable worker ID; a session has a separate ownership generation that increases when ownership is granted again. Heartbeats renew a lease. Another worker cannot take a valid lease from its owner.
-- Unresolved/exhausted failures and uncertain external outcomes go to a dead-letter recovery path that can reach the originating agent session. This must not blindly resend an uncertain effect.
-- Disk and RAM usage must be bounded. Cleanup cannot silently discard accepted work or required live state.
-- Unused records have a **configurable seven-day retention default**. Still-used material is protected by an explicit live reference/pin. Releasing the final pin on an already old record makes it eligible for cleanup; incidental reads do not restart its age.
+Acknowledge acceptance only after the step's recoverable records and capacity
+reservations commit. For awaited work these include immutable arguments, source
+causal references, correlation/result-return binding and authorized outbox intent.
+The same records must reconstruct the receipt after a lost response or restart.
+An admission acknowledgement is not an end-to-end protocol acknowledgement of
+processing or delivery; connectors must specify those separately.
 
-The record layouts, exact clock basis, resource units, age anchors, retry windows and policy APIs below are proposals. The seven-day unused-record default is not a seven-day automatic kill switch for active work.
+Scope caller operation IDs by authenticated namespace, resolved session/work scope
+and operation kind. The same key and canonical immutable arguments return the
+same logical receipt. Changed arguments conflict without altering the first
+submission. Checking uniqueness, reserving capacity and inserting records are
+one transaction, not a preflight followed by an unprotected write.
 
-## Durable admission and receipts
+A transaction covers one durable step. Successful processor commit atomically
+writes proposed state, the complete output/fan-out set and input completion.
+Reply acceptance atomically records the correlated outcome and origin delivery.
+Invocation admission validates current context/cancellation. No model execution,
+network I/O or long-running callback occurs inside these transactions.
 
-**Agreed acceptance boundary:** acknowledge `accepted` only after a recoverable bundle has committed: request identity and immutable arguments, source session and causal references, pending continuation for await-result work, and authorized outgoing intent. The durable record must also provide the same stable pending receipt on retry. Returning a receipt is acknowledgement of admission, not completion of the external work.
+Reconstruct pending dispatch, result delivery and recovery from committed records,
+not process memory. Repeated evaluation is allowed; generation/revision checks and
+logical deduplication prevent multiple accepted results. No accepted work may be
+silently lost because the process failed after commit or the receipt was lost.
 
-Before that commit, preparation may fail or the process may crash without accepted work. After it, a process crash or lost response must not lose the admitted request. Retrying the same scoped operation recovers its original receipt and logical work; it does not create another request or effect.
+Declare a retry window and preserve receipts/tombstones throughout it. Collection
+must not make a forgotten old operation fresh. A server-bound age/sequence floor
+can reject stale operations after their receipt is collected; arbitrary caller
+timestamps cannot reset that floor. Exact window and floor representation remain
+to be selected. Deliberately new work requires fresh identity and authority.
 
-**Proposed local operation key:** authenticated namespace + resolved internal session + operation kind + caller operation ID. Treat caller IDs as scoped idempotency keys, not global authority. Bind the key to the immutable submission arguments, including destination and causal references. A retry with the same key and same arguments returns the original receipt. The same key with different arguments returns an explicit conflict and preserves the original record. A canonical digest may support comparison, but canonicalization and collision/error handling still need a concrete contract.
+Ephemeral in-memory transport can lose receipts and pending events. It must expose
+that weaker guarantee and cannot masquerade as durable admission. A future Kafka
+backend still needs coordinated consumption, state and outbox recovery through
+the shared execution contract.
 
-This retry guarantee has a declared validity window. Deduplication records and admission receipts are retained through that window. Once it closes, an old operation is rejected as stale; forgetting its receipt must not make it fresh work. The proposed age/sequence boundary is described under retention. An operation ID is not reusable merely because a process restarted or a record was collected.
+## Heartbeat leases and fenced ownership
 
-The transaction is **per durable step**, not graph-wide. No LLM call, remote sink operation or long-running tool invocation belongs inside it. Admission coordinates the local records and budget reservations; dispatch runs after commit. Reply acceptance, resume admission and terminal transitions have their own local atomic boundaries. Their composition into a complete runtime still needs implementation design and tests.
+An ownership record contains the execution scope, stable worker ID, persistent
+generation and authoritative lease deadline. Session invocation and node-state
+scope rules must prevent conflicting accepted updates while allowing independent
+sessions/keys to proceed. Ownership generation is separate from cancellation
+and context revision.
 
-On restart, reconstruct dispatch/resume queues from committed records, not from process memory or an unacknowledged receipt buffer. The durable outbox may drive another delivery attempt with the same identity. It does not itself prove exactly-once effects at a provider.
+With authoritative time `now`, validity means `now < deadline`:
 
-An explicitly ephemeral in-memory profile remains useful for tests. It must advertise that acceptance, receipts, deduplication and pending work can be lost on process failure. It cannot claim the durable profile's restart guarantee. The model includes a receipt → crash → lost-work example for this weaker profile.
+- Claim only an explicitly unowned or expired scope, atomically incrementing its
+  generation. Concurrent contenders cannot both win.
+- Renew only the current worker/generation while valid. A late heartbeat cannot
+  revive an expired grant.
+- Release the current grant; reacquisition by the same worker still increments
+  generation so old tokens stay stale.
+- Check worker, generation, deadline and applicable state revision in the same
+  transaction as every protected state/result/effect-admission commit.
 
-## Local ownership and heartbeats
+Takeover preserves pending work and causal evidence. It does not cancel a valid
+continuation or rename its effect. A paused worker can still execute physically
+after losing authority; fencing rejects its later commits. A heartbeat is an
+authority renewal, not proof of physical life or death.
 
-The proposed local ownership record contains:
+Persist generations across restarts. A process-local monotonic clock cannot be
+compared naively with a deadline from a previous boot. The authority needs a
+restart-safe clock/epoch contract; uncertainty cannot authorize taking a
+potentially valid lease. The production operational clock contract still needs validation.
 
-```text
-session ID + stable worker ID + persistent ownership generation + lease deadline
-```
+A future distributed profile needs an authoritative atomic ownership service;
+leader election for that service is distinct from assigning work to a worker.
+No distributed consensus algorithm is selected. Neither local nor distributed
+fencing can retract a provider request already admitted.
 
-This is separate from the session's cancellation generation and context revision. Taking over execution must not cancel a valid durable continuation, discard its history, or rename its logical request. The new owner resumes that work with its newly granted ownership token.
+## Recover uncertain effects
 
-The local transactional store arbitrates claim, renewal, release and protected commits. With authoritative time `now`, a lease is valid only when `now < deadline`; it is expired when `now >= deadline`.
+Keep three external outcomes distinct: applied, confirmed not applied, and
+unknown. A timeout or lost response does not establish non-application. An outbox
+alone cannot guarantee exactly-once effects at a destination without suitable
+idempotency or reconciliation.
 
-- **Claim:** atomically compare the current owner/generation and eligibility. Grant only if unowned by explicit release or expired, and increment the ownership generation. Concurrent contenders cannot both win the same transition. A successful earlier preflight is not sufficient.
-- **Heartbeat:** renew only the current worker and generation while the lease is still valid. A late heartbeat cannot revive an expired or superseded grant. The worker must obtain a new grant after expiry.
-- **Release:** close the current valid grant. Reacquiring even with the same worker ID creates a new generation, preventing an old token from becoming valid again.
-- **Protected commit:** validate current worker, generation and unexpired lease in the same authoritative transition that admits state/result/effect changes. A worker waking after a pause or takeover cannot commit with its old token.
+Quarantine exhausted or uncertain attempts with source scope, request/effect ID,
+pinned destination/account, attempt count, evidence and bounded recovery state.
+Atomically record a correlated recovery-notification intent. For agent-originated
+work, its destination is the originating agent session, not the failed external
+sink; other work needs an explicit recovery route or inspectable status.
 
-These are local atomic storage contracts, not a promise that only one physical harness process can be running. A paused or partitioned worker might still execute instructions while its authority has expired; fencing prevents its later protected commits. Heartbeats establish lease authority, not proof of physical life or death. A live worker unable to renew can lose an expired lease. Lease duration, heartbeat interval and grace policy remain operational choices; they must not weaken the explicit validity test silently.
+Deduplicate notifications by effect and failure episode. Bound notification
+attempts so a failed notice cannot create an endless chain of notices about
+notices. Exhaustion remains inspectable; it does not imply eventual notification.
+Required evidence stays protected until recovery obligations settle.
 
-**Clock/restart boundary:** the bounded model assumes one monotonic authoritative clock and persistent generations. A process-local monotonic clock normally resets on restart and cannot simply be compared with an old persisted deadline. A boot epoch or another comparable authority-time policy must be selected before implementation. Ownership generations must not reset with worker memory. Handling restart or an unavailable clock/authority must preserve fencing; clock uncertainty is not permission to steal a potentially valid lease.
+A recovery event is evidence, not resend authority. The agent or operator may
+inspect, ask the user or reconcile with the adapter. Retry an uncertain effect
+only with relevant authority and a safe adapter contract: authoritative evidence
+of non-application, or genuine idempotency under the same stable effect key.
+Never rotate the key to evade deduplication. Confirmation of prior success closes
+recovery without sending again. Otherwise preserve uncertainty; a deliberately
+new action must explicitly account for the possible prior effect.
 
-A future distributed profile could use a consensus-backed authoritative store for the same atomic interface. Store leader election is distinct from choosing a session's worker. This revision chooses no consensus algorithm and contains no distributed implementation or consensus model; the focus is the local store.
+Confirmed failure requires evidence that the attempt did not apply. Ambiguous
+provider errors remain unknown. Invocation cancellation, pipeline drain, moving
+work to a dead-letter record and lease expiry do not resolve that uncertainty.
 
-External in-flight sends remain a separate boundary. A newly expired lease cannot retract a provider request already admitted/sent. Stronger provider-side fencing requires provider cooperation; the earlier delivery-admission limitation remains in force.
+## Bounded resources and retention
 
-## Dead-letter recovery reaches the agent
+Apply byte/count quotas as well as age limits. Seven days of retention alone can
+still fill disk in minutes. Bound queues, pending work, concurrent evaluations,
+input/output/state sizes, fan-out, cached context, retries, deduplication,
+recovery records and telemetry. Native callbacks also need an honest isolation
+or cooperative execution policy; a trait does not enforce CPU/memory limits.
 
-An external effect may be confirmed successful, confirmed not applied/failed, or **outcome unknown**. A timeout or lost response does not prove that an email was not sent. Preserve that distinction when quarantining an unresolved or exhausted attempt.
+Reserve capacity before admission, including headroom for completion, failure,
+recovery and cleanup. Collect eligible records, then backpressure or reject new
+work if it still cannot fit. Do not acknowledge work and later drop it to satisfy
+a quota. Accounting must cover WAL, indexes, allocation overhead and temporary
+copies, not just payload bytes.
 
-**Proposed recovery record:** source session/namespace, request and stable effect/intent identity, resolved destination/account, attempt identity/count, outcome classification, relevant evidence references, and recovery state/budget. Commit the dead-letter entry and its correlated recovery-notification intent durably. The notification goes to the originating agent session, not automatically to the failed external sink.
+Unused-record retention defaults to **seven days, configurable**. Proposed
+initial age anchors are creation for ordinary immutable records and terminal/
+quarantine creation for outcome/recovery records; these per-class choices remain
+under review. Deduplication additionally covers its retry window.
+Incidental reads do not reset age. The exact per-class policy must be exposed
+and tested, not inferred from a generic last-access timestamp.
 
-Deduplicate the logical recovery event by effect and failed/uncertain attempt. Retries of notification delivery must not produce multiple logical agent events for that episode. A later authorized attempt can have a new bounded episode while preserving the original effect identity. Notification attempts share a finite recovery budget; a failed notification must not create a fresh unbounded chain of dead letters about dead letters. Exhaustion leaves an inspectable record for an explicit operator/recovery policy; it does not prove that the agent will eventually receive the event.
+Live references protect pending and accepted continuations, current state and
+its recovery tail, undelivered outcomes, unresolved recovery and pinned graph/
+code/config/binding versions. A current state value is not evicted because its
+last update is old. Pin the minimum necessary material, with finite pending-work
+budgets and explicit deadlines.
 
-The agent can inspect evidence, reconcile with an adapter, ask the user, or propose a recovery action. Its receipt of an uncertainty event does not itself authorize resending. A recovery retry needs the relevant policy/user authority and a safe adapter contract. For a non-idempotent uncertain effect, require authoritative evidence that it did not apply before retrying; otherwise keep it quarantined or seek a deliberate resolution. An adapter's genuine idempotency guarantee can permit an authorized retry under the same stable effect key. Never change the key to evade deduplication.
+Expiry of active work is separate from retention: commit its terminal outcome
+first, settle dependent execution/effect/recovery obligations, then release only
+references no longer needed. Cancellation or a received reply alone is not proof
+that every pin can be released. After the final reference is removed, an already
+old record becomes eligible for crash-safe collection. Eligibility does not
+promise immediate or eventual cleanup without a progressing collector.
 
-Confirmed failure means the adapter can establish that this attempt did not apply; ambiguous error responses stay unknown. Moving a record to the DLQ does not resolve that uncertainty or create an exactly-once guarantee. Reconciliation that confirms prior success should close the recovery without resending. Exact evidence schemas, operator escalation and adapter-specific reconciliation remain implementation policy.
+Compaction only changes historical representation. It neither deletes raw
+protected evidence nor releases references. Retention may collect unreferenced
+old history; context assembly must therefore select available evidence rather
+than require an entire lifetime transcript.
 
-## Bounded storage, pins and age
+## Verification boundaries
 
-Age and capacity limits solve different problems. Seven-day retention does not prevent a busy system from filling its disk or RAM in minutes. Apply configured byte/count budgets as well as age eligibility.
+The preserved [TLA+ models and results](../spec/README.md) check bounded admission,
+lease, recovery and retention abstractions. Atomic transactions, reliable
+identity/clock inputs and accurate resource accounting are model assumptions.
+The separate models do not prove automatic composition or physical disk-full,
+fsync, provider or native-extension behavior.
 
-**Proposed age anchors:** ordinary immutable event/causal records age from their creation; completed outcomes and dead-letter records age from their terminal/quarantine creation. Deduplication/tombstone retention must additionally cover the supported retry/replay window. These per-class anchors require review and are not hidden changes to the agreed seven-day default.
-
-A record is “still used” when an explicit live reference needs it: a pending or accepted continuation, current state/snapshot, recovery process, or another declared dependency. A read or agent inspection alone does not extend retention. Current state is not evicted merely because its last update is older than seven days; retain its required snapshot and recovery tail until superseded safely.
-
-Pin only the minimum necessary causal material. Pending work also needs its own configured deadline/storage budget; unlimited pins are not a capacity policy. Pending-work expiry is separate from unused-record retention. If a configured deadline expires, first commit an explicit terminal `expired` outcome, close the continuation and release its pins. Only then may cleanup reclaim now-eligible material. Do not delete a live request to make an occupancy invariant pass.
-
-When the final reference is released, an already age-expired record is immediately **eligible** for collection. Actual collection still requires scheduling and crash-safe storage operations. Neither the design nor the safety model promises instantaneous or eventual cleanup without those progress assumptions.
-
-**Proposed admission/capacity sequence:** estimate and reserve the new step's durable and volatile footprint; clean eligible material; then backpressure or explicitly reject if the budgets still cannot accommodate it. Never acknowledge accepted work and silently drop it later because a queue or disk filled. Reserve space for terminal outcomes, recovery/control records and cleanup so ordinary work cannot consume all capacity needed to complete or expire existing work.
-
-Bound queues, payload sizes, fan-out, cached context, current/operator state, deduplication records and DLQ storage independently. Admission estimates must account for the actual engine's WAL, indexes, filesystem allocation, compaction/temporary copies and reserved headroom. The abstract model's units are not a measured disk/RAM bound, and no physical disk-full/fsync behavior is verified here.
-
-**Proposed stale-operation rule:** use an authenticated/server-bound operation age or sequence floor within each admission scope. Keep the admission/tombstone for the whole retry window; after the floor advances, reject an older ID even if its record is gone. Caller-supplied timestamps must not defeat that boundary. Starting deliberately new work requires a fresh valid operation identity and authorization, not blind replay under a forgotten ID. Exact window lengths, persistence/compaction of the floor and replay policy remain open.
-
-## Checked scope and next implementation work
-
-The [TLA+ models and results](../spec/README.md) now include admission/crash recovery, local leases, bounded dead-letter recovery and retention/capacity. They include positive traces and mutations that expose unsafe alternatives. The existing session and sink checks remain separate models; there is no proof that the slices compose automatically.
-
-Atomic local transactions, accurate accounting, trusted clock/identity/policy inputs, durable reference validity and adapter claims are assumptions. Models use small abstract time/resource units, not seven literal day ticks. They check safety and reachable examples without fairness or eventual-cleanup guarantees. Physical storage, provider effects, process crashes during real database recovery, clock restart policy and implementation refinement still require concrete design and tests. Agent-loop behavior is outside this revision.
+Implementation gates include crash/receipt-loss admission, conflicting duplicate
+submissions, concurrent claims, late heartbeats/results, restart fencing, atomic
+fan-out, out-of-order returns with newer context, cross-session isolation,
+revocation at effect admission, ambiguous sends without resend, recovery-budget
+exhaustion and live-reference-safe collection under pressure. Retain existing
+model artifacts while testing the unified implementation against these contracts.

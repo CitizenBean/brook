@@ -1,21 +1,23 @@
 # Brook
 
-Brook is a proposed Rust platform for processing event streams and running agents only when they add value. The name comes from a babbling brook.
+Brook is a Rust event-processing platform that uses inexpensive processors
+before starting agents with swappable harnesses. A client is both a producer and
+a sink; the terminal is the first example. Processors, agents, asynchronous work
+and result delivery belong to one durable execution model.
 
-Events can come from people, Home Assistant, timers, or other systems. An operator graph applies inexpensive rules, classifiers, or user-defined functions before spending tokens on an agent. Any operator can send results to another processor, one or more agents, or a sink such as a terminal, Discord, or Kafka. Agents are optional processors within that graph and can use swappable agentic harnesses. They can send messages to other agents and systems themselves. Tools support synchronous calls and asynchronous work with checkpointed context and tool-defined replies. A more integrated native Brook harness is proposed alongside other harnesses. Dynamic circular-dependency checks are required; their precise scope and retry handling remain under review.
+Start with the [architecture](docs/architecture.md): ingress → graph/processors →
+agent → asynchronous work → reply → sink. It describes logical routing, bounded
+context, easy defaults, advanced graphs and the typed connector/control-plane
+direction. Its [status and limits](docs/architecture.md#status-and-limits) separate
+the intended design from the experimental downstream implementation.
 
-The priorities are extensibility, clean interfaces, easy setup, and useful defaults. The design includes Kafka-like topics with interchangeable in-memory, local on-disk, and Kafka backends, and a preference for WebAssembly for portable user-defined functions.
+- [Context and routing](docs/context-and-routing.md): session isolation, portable
+  continuation returns and authorization of each sink intent.
+- [Local reliability](docs/local-reliability.md): atomic admission, heartbeat
+  leases, generation fencing, unknown-outcome recovery and bounded retention.
+- [TLA+ models and results](spec/README.md): bounded checks and counterexamples,
+  preserved as design evidence rather than implementation proof.
 
-## Current status
-
-This repository contains an architecture draft for discussion. There is no implementation or stable API yet. The draft distinguishes agreed foundations, proposed contracts, and open decisions. It makes no performance or delivery guarantees for Brook.
-
-Start with the [architecture draft](docs/architecture.md), including five diagrams and the [questions for review](docs/architecture.md#questions-for-review).
-
-The [session, context and authorized-delivery proposal](docs/context-and-routing.md) develops multi-session routing, portable asynchronous resumptions and per-message sink authorization, with [bounded TLA+ checks](spec/README.md).
-
-The [local reliability decisions](docs/local-reliability.md) cover durable admission, leased ownership, dead-letter recovery and bounded storage with configurable seven-day unused-record retention.
-
-Editable Mermaid sources and SVG views are in [docs/diagrams](docs/diagrams). The diagrams show logical responsibilities, not a finalized crate layout or deployment topology.
-
-Mermaid is the editable diagram source; the SVG files are matching previews rendered with Graphviz. Keep their nodes, edges, and labels synchronized when editing.
+[Diagrams](docs/diagrams) pair editable Mermaid sources with SVG views. Keep their
+nodes, edges and labels synchronized. They show intended responsibilities, not
+separate required databases or a finalized crate layout.
