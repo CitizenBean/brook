@@ -1,23 +1,17 @@
 flowchart TB
-    accTitle: Brook operator and agent graph
-    accDescr: Operators route directly to sinks, to processors, or to agents using swappable harnesses. Agents send messages to other agents and systems. Timed follow-ups return through topics.
-    sources["Sources<br/>Users · Home Assistant · other systems"]
-    topics["Topics"]
-    operator["Operator<br/>Rule · classifier · UDF"]
-    next["Another operator"]
-    agents["Agent A<br/>Swappable harness"]
-    agentb["Agent B<br/>Swappable harness"]
-    sinks["Sinks and systems<br/>Terminal · Discord · Kafka"]
-    timer["Follow-up timer<br/>Durability proposed"]
-    sources --> topics
-    topics --> operator
-    operator -->|direct output| sinks
-    operator -->|further processing| next
-    operator -->|dispatch| agents
-    next -->|direct output| sinks
-    next -->|dispatch| agents
-    agents -->|message| agentb
-    agents -->|message| sinks
-    agentb -->|message| sinks
-    agents -->|schedule| timer
-    timer -->|due event| topics
+    accTitle: Brook event flow
+    accDescr: One shared execution model carries graph-node deliveries, optional agent work, correlated origin results and authorized sink effects. Logical routing can bypass agents.
+    ingress["Ingress<br/>Producer + durable admission"]
+    processors["Processors / routing Operator<br/>Configured paths and transforms"]
+    agent["Agent node<br/>AgentConfig + swappable harness"]
+    work["Durable asynchronous work<br/>Await-result correlation"]
+    reply["Authenticated reply<br/>Accepted outcome + origin delivery"]
+    resume["Fresh origin invocation<br/>Current context + exact evidence"]
+    sink["Authorized sink intent<br/>Applied / not applied / unknown"]
+    ingress --> processors
+    processors -->|selected path| agent
+    processors -->|direct sink path| sink
+    agent --> work
+    work --> reply
+    reply -->|stored origin binding| resume
+    resume --> sink
