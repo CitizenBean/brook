@@ -1,18 +1,12 @@
 flowchart TB
-    accTitle: Brook transport boundary
-    accDescr: Operators use a common topic contract backed by one selected in-memory, local disk, or Kafka implementation. State, timers, and output intents need a separate recovery contract coordinated with consumed positions.
-    runtime["Operator runtime"]
-    topics["Topic contract<br/>Publish · subscribe<br/>Acknowledge · replay"]
-    memory["In-memory<br/>Explicitly ephemeral"]
-    disk["Local on-disk<br/>Proposed default"]
-    kafka["Kafka<br/>Scaling option"]
-    recovery["State and recovery<br/>Coordinate consumed positions"]
-    state["State and history<br/>Ownership + recovery"]
-    effects["Timers + output intents<br/>Cancel + deduplicate"]
-    runtime --> topics
-    topics --> memory
-    topics --> disk
-    topics --> kafka
-    runtime -.->|separate contract| recovery
-    recovery --> state
-    recovery --> effects
+    accTitle: Brook transport and execution authority
+    accDescr: Transport adapters expose their durability capabilities. One local execution authority coordinates admission, work state, outbox and recovery; generic sinks report external effect outcomes.
+    backend["Transport adapters<br/>Ephemeral / local disk / future Kafka"]
+    ingress["Generic producer boundary<br/>Identity + admission acknowledgement"]
+    authority["Shared local execution authority<br/>Dedup / leases / state / outbox / quotas"]
+    delivery["Graph-node and result deliveries<br/>Agent work + correlation records"]
+    sink["Generic sink boundary<br/>Evidence + uncertain-effect recovery"]
+    backend --> ingress
+    ingress --> authority
+    authority --> delivery
+    delivery -->|authorized effect admission| sink
